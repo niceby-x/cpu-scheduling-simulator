@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Scheduling Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Aurora background orbs -->
+    <div class="aurora" aria-hidden="true">
+        <div class="orb orb-cyan"></div>
+        <div class="orb orb-violet"></div>
+        <div class="orb orb-rose"></div>
+        <div class="orb orb-amber"></div>
+        <div class="orb orb-teal"></div>
+    </div>
+    <div class="noise" aria-hidden="true"></div>
+
+    <!-- Floating top bar -->
+    <nav class="topbar">
+        <div class="topbar-brand">
+            <span class="topbar-icon">⚙</span>
+            <span>CPU Scheduler</span>
+        </div>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">
+            <span class="icon-moon">◑</span>
+            <span class="icon-sun">☀</span>
+        </button>
+    </nav>
+
+    <div class="page">
+
+        <!-- Hero -->
+        <header class="hero">
+            <p class="hero-eyebrow">OS Kernel Simulator</p>
+            <h1>Process <em>Scheduling</em></h1>
+            <p class="hero-sub">Pick an algorithm, load your processes, and watch the CPU work.</p>
+        </header>
+
+        <!-- Two-column dashboard -->
+        <div class="dashboard">
+
+            <!-- LEFT: Config Panel (sticky) -->
+            <aside class="panel config-panel glass">
+                <p class="panel-label">Algorithm</p>
+
+                <!-- Visible styled dropdown -->
+                <div class="select-wrapper">
+                    <select id="algorithm">
+                        <option value="FCFS">First-Come, First-Served (FCFS)</option>
+                        <option value="SJF">Shortest Job First (SJF)</option>
+                        <option value="SRT">Shortest Remaining Time (SRT)</option>
+                        <option value="RR">Round Robin (RR)</option>
+                        <option value="PRIORITY_NP">Priority — Non-Preemptive</option>
+                        <option value="PRIORITY_P">Priority — Preemptive</option>
+                        <option value="PRIORITY_RR">Priority + Round Robin</option>
+                    </select>
+                    <span class="select-chevron" aria-hidden="true">▾</span>
+                </div>
+
+                <!-- Algo description -->
+                <div id="algo-description" class="algo-chip"></div>
+
+                <!-- Quantum input — fixed layout, no overlap -->
+                <div id="quantum-container" class="quantum-row" style="display:none;">
+                    <p class="panel-label" style="margin-bottom:10px;">Time Quantum</p>
+                    <div class="quantum-input-wrap">
+                        <button class="q-btn" id="q-dec">−</button>
+                        <input type="number" id="quantum" value="2" min="1">
+                        <button class="q-btn" id="q-inc">+</button>
+                    </div>
+                </div>
+
+                <div class="config-actions">
+                    <button id="simulate-btn" class="btn primary">▶ Run</button>
+                    <button id="compare-btn"  class="btn glass-btn">⊞ Compare</button>
+                </div>
+            </aside>
+
+            <!-- RIGHT: Process Queue -->
+            <section class="panel queue-panel glass">
+                <div class="panel-header">
+                    <div>
+                        <p class="panel-label">Process Queue</p>
+                        <p class="panel-sub" id="process-count-badge">5 processes loaded</p>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button id="add-process-btn" class="btn icon-btn" title="Add process">＋</button>
+                        <button id="reset-btn"       class="btn icon-btn danger-icon" title="Reset">↺</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="input-table">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Arrival</th>
+                                <th>Burst</th>
+                                <th>Priority</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="process-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div><!-- /.dashboard -->
+
+        <!-- OUTPUT SECTION — full width below dashboard -->
+        <div id="output-section" class="output-section" style="display:none;">
+
+            <!-- Gantt -->
+            <div class="glass out-card gantt-card">
+                <div class="out-card-header">
+                    <div>
+                        <p class="panel-label">Gantt Chart</p>
+                        <span class="algo-pill" id="algo-tag"></span>
+                    </div>
+                    <button id="export-btn" class="btn glass-btn small">↓ CSV</button>
+                </div>
+                <div class="gantt-wrapper">
+                    <div class="gantt-container" id="gantt-chart"></div>
+                    <div class="timeline" id="gantt-timeline"></div>
+                </div>
+            </div>
+
+            <!-- Results table -->
+            <div class="glass out-card">
+                <p class="panel-label" style="margin-bottom:18px;">Per-Process Results</p>
+                <div class="table-responsive">
+                    <table id="results-table">
+                        <thead>
+                            <tr>
+                                <th>Process</th>
+                                <th>Waiting Time</th>
+                                <th>Turnaround Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Stats row -->
+            <div class="stats-row">
+                <div class="stat-glass glass">
+                    <span class="stat-icon">⏳</span>
+                    <span class="stat-label">Avg Waiting Time</span>
+                    <span class="stat-value" id="avg-wt">—</span>
+                    <span class="stat-unit">time units</span>
+                </div>
+                <div class="stat-glass glass">
+                    <span class="stat-icon">🔄</span>
+                    <span class="stat-label">Avg Turnaround Time</span>
+                    <span class="stat-value" id="avg-tat">—</span>
+                    <span class="stat-unit">time units</span>
+                </div>
+            </div>
+
+        </div><!-- /#output-section -->
+
+        <!-- Comparison -->
+        <div id="comparison-section" class="glass out-card" style="display:none; margin-top:20px;">
+            <div class="out-card-header">
+                <p class="panel-label">Algorithm Comparison</p>
+                <span class="badge">Lower = Better ↓</span>
+            </div>
+            <div class="table-responsive">
+                <table id="comparison-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left; padding-left:20px;">Algorithm</th>
+                            <th>Avg Waiting</th>
+                            <th>Avg Turnaround</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparison-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div><!-- /.page -->
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+    <script src="script.js"></script>
+    <script>
+        // ── Theme Toggle ──
+        const themeBtn = document.getElementById('theme-toggle');
+        const applyTheme = (light) => {
+            document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark');
+            localStorage.setItem('cpuTheme', light ? 'light' : 'dark');
+        };
+        applyTheme(localStorage.getItem('cpuTheme') === 'light');
+        themeBtn.addEventListener('click', () => {
+            applyTheme(document.documentElement.getAttribute('data-theme') !== 'light');
+        });
+
+        // ── Quantum stepper buttons ──
+        document.getElementById('q-dec').addEventListener('click', () => {
+            const q = document.getElementById('quantum');
+            if (parseInt(q.value) > 1) q.value = parseInt(q.value) - 1;
+        });
+        document.getElementById('q-inc').addEventListener('click', () => {
+            const q = document.getElementById('quantum');
+            q.value = parseInt(q.value) + 1;
+        });
+    </script>
+</body>
+</html>
