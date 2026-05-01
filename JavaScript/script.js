@@ -200,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (result) {
-            // Update algo pill
+            window.lastSimulationData = { algoName: algorithmSelect.options[algorithmSelect.selectedIndex].text, result };
             const tag = document.getElementById("algo-tag");
             if (tag) tag.textContent = algorithmSelect.options[algorithmSelect.selectedIndex].text;
 
@@ -525,22 +525,65 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ── Export CSV ─────────────────────────────────────────────────────────
     document.getElementById("export-btn")?.addEventListener("click", () => {
-        let csv = "Process ID,Response Time,Waiting Time,Turnaround Time\n";
-        document.querySelectorAll("#results-body tr").forEach(row => {
-            let cols = [];
-            row.querySelectorAll("td").forEach(td => cols.push(td.textContent.trim()));
-            csv += cols.join(",") + "\n";
-        });
-        csv += `\nAVERAGES,,${document.getElementById("avg-wt").textContent},${document.getElementById("avg-tat").textContent}\n`;
+        if (!window.lastSimulationData) {
+            showToast("Please run a simulation first.", "error");
+            return;
+        }
 
+        const { algoName, result } = window.lastSimulationData;
+        
+        // 1. Top Header Rows
+        let csv = "Consider the following set of processes with the length of the CPU burst time given in milliseconds:\n";
+        csv += `The processes are assumed to have arrived according to the table.,,,,,,1. ${algoName}\n`;
+        
+        // 2. Table Headers (Matching the image order)
+        csv += "Process,Burst Time,Priority,Arrival time,waiting time,Turnaround time\n";
+
+        // 3. Table Data
+        // Sort processes by ID to match P1, P2, P3... order
+        const sortedProcesses = [...result.processes].sort((a, b) => parseInt(a.id.slice(1)) - parseInt(b.id.slice(1)));
+        
+        sortedProcesses.forEach(p => {
+            // Leave priority blank if it's 0 or not a priority algo to match image
+            const prio = (algoName.includes("Priority") || p.priority > 0) ? p.priority : "";
+            csv += `${p.id},${p.bt},${prio},${p.at},${p.wt},${p.tat}\n`;
+        });
+
+        // 4. Averages
+        const avgWt = document.getElementById("avg-wt").textContent;
+        const avgTat = document.getElementById("avg-tat").textContent;
+        csv += `average,,,,${avgWt},${avgTat}\n\n`;
+
+        // 5. CSV Gantt Chart (Spreading 1 unit per column)
+        csv += `${algoName},Gantt chart\n`;
+        
+        let ganttProcesses = "";
+        let ganttTimeline = "0,";
+        let currentTime = 0;
+
+        // Expand each block in the Gantt array unit-by-unit across the CSV columns
+        result.gantt.forEach(block => {
+            const duration = block.end - block.start;
+            for(let i = 0; i < duration; i++) {
+                ganttProcesses += `${block.id === 'Idle' ? '-' : block.id},`;
+                currentTime++;
+                ganttTimeline += `${currentTime},`;
+            }
+        });
+
+        csv += ganttProcesses + "\n";
+        csv += ganttTimeline + "\n";
+
+        // 6. Download Logic
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement("a");
         a.href = url;
-        a.download = `CPU_Scheduling_${algorithmSelect.value}.csv`;
+        a.download = `CPU_Scheduling_${algoName.replace(/\s+/g, '_')}.csv`;
         document.body.appendChild(a); a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast("CSV downloaded! ✅", "success");
+        
+        showToast("CSV Layout downloaded! ✅", "success");
     });
 });

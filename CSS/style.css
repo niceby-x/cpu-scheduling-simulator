@@ -249,10 +249,11 @@ h1 {
     font-family: var(--f-display);
     font-size: clamp(2.8rem, 6.5vw, 5rem);
     font-weight: 800;
-    line-height: 1.0;
+    line-height: 1.15; 
     letter-spacing: -0.04em;
     color: var(--text);
-    margin-bottom: 16px;
+    padding-bottom: 12px; 
+    margin-bottom: 4px; 
 }
 
 h1 em {
@@ -263,6 +264,11 @@ h1 em {
     background-clip: text;
     background-size: 200% 200%;
     animation: gradientShift 7s ease infinite;
+    
+    /* THE NUCLEAR FIX */
+    display: block;           /* Forces it out of inline text rendering */
+    padding-bottom: 0.3em;    /* Now the browser HAS to respect this space */
+    margin-top: -8px;         /* Pulls it slightly closer to the word "Process" above it */
 }
 
 [data-theme="light"] h1 em {
@@ -567,9 +573,9 @@ thead { background: rgba(255,255,255,0.03); }
 th {
     padding: 12px 14px;
     font-family: var(--f-mono);
-    font-size: 0.6rem;
-    font-weight: 500;
-    color: var(--text-dim);
+    font-size: 0.65rem; /* Slightly larger text size for improved legibility */
+    font-weight: 600; /* Bolder weight to stand out */
+    color: var(--text); /* Increased contrast by using the primary text color instead of text-dim */
     text-transform: uppercase;
     letter-spacing: 0.14em;
     text-align: center;
@@ -622,7 +628,7 @@ td input[type="number"] {
     padding: 6px 8px;
     color: var(--text);
     font-family: var(--f-mono);
-    font-size: 0.85rem;
+    font-size: 0.9rem; /* Increased from 0.85rem for better readability */
     text-align: center;
     transition: all var(--t);
     -moz-appearance: textfield;
@@ -731,7 +737,9 @@ td input[type="number"]:focus {
     overflow: hidden;
     white-space: nowrap;
     transition: width 0.7s var(--spring);
-    border-right: 1px solid rgba(255,255,255,0.12);
+    
+    /* Replaced simple border with an inset shadow for depth */
+    box-shadow: inset -1px 0 0 rgba(255,255,255,0.15), inset 1px 0 0 rgba(0,0,0,0.05);
     letter-spacing: 0.03em;
     position: relative;
 }
@@ -761,18 +769,47 @@ td input[type="number"]:focus {
 }
 .gantt-block.idle::after { display: none; }
 
+/* Custom Scrollbar for Gantt Wrapper */
+.gantt-wrapper::-webkit-scrollbar {
+    height: 8px; /* Thinner, sleeker profile */
+}
+
+.gantt-wrapper::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05); /* Very faint track */
+    border-radius: 10px;
+}
+
+[data-theme="light"] .gantt-wrapper::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.gantt-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(196, 181, 253, 0.35); /* Soft lavender to match your accent */
+    border-radius: 10px;
+    border: 2px solid transparent; 
+    background-clip: padding-box;
+}
+
+.gantt-wrapper::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(196, 181, 253, 0.6);
+}
+
 .timeline {
     position: relative;
     height: 24px;
-    margin-top: 10px;
+    margin-top: 14px; /* Added slightly more space below the bar */
     min-width: 500px;
+    
+    /* Prevent edge markers from clipping */
+    margin-left: 10px;
+    width: calc(100% - 20px);
 }
 
 .time-marker {
     position: absolute;
     transform: translateX(-50%);
     font-family: var(--f-mono);
-    font-size: 0.62rem;
+    font-size: 0.75rem;
     color: var(--text-dim);
     font-weight: 500;
 }
@@ -809,7 +846,38 @@ td input[type="number"]:focus {
 
 .stat-glass:hover { transform: translateY(-4px); box-shadow: var(--glass-shadow), 0 0 40px rgba(196,181,253,0.14); }
 
-.stat-icon { font-size: 1.4rem; margin-bottom: 4px; line-height: 1; }
+.stat-icon { 
+    font-size: 1.2rem; 
+    line-height: 1; 
+    margin-bottom: 12px;
+    
+    /* Create a soft circular frame */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(196, 181, 253, 0.15);
+    border: 1px solid rgba(196, 181, 253, 0.3);
+}
+
+[data-theme="light"] .stat-icon {
+    background: rgba(124, 108, 240, 0.1);
+    border-color: rgba(124, 108, 240, 0.2);
+}
+
+/* Style the new SVG icons */
+.stat-icon svg {
+    width: 20px;
+    height: 20px;
+    color: var(--p-lavender); /* Soft lavender in dark mode */
+    transition: color var(--t);
+}
+
+[data-theme="light"] .stat-icon svg {
+    color: var(--accent); /* Richer purple in light mode for contrast */
+}
 
 .stat-label {
     font-family: var(--f-mono);
@@ -820,15 +888,13 @@ td input[type="number"]:focus {
     letter-spacing: 0.12em;
 }
 
-.stat-value {
+.stat-label {
     font-family: var(--f-mono);
-    font-size: 2.8rem;
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: -0.03em;
-    color: var(--p-lavender);
-    margin: 6px 0 2px;
-    text-shadow: 0 0 24px rgba(196,181,253,0.40);
+    font-size: 0.7rem; /* Increased from 0.6rem */
+    font-weight: 700;  /* Bolder weight */
+    color: var(--text-sub); 
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
 }
 
 [data-theme="light"] .stat-value {
@@ -837,27 +903,90 @@ td input[type="number"]:focus {
 }
 
 .stat-unit {
-    font-size: 0.62rem;
-    color: var(--text-sub);   /* was --text-dim — too dark */
+    font-size: 0.7rem; /* Increased from 0.62rem */
+    color: var(--text-dim); 
     font-weight: 500;
     font-family: var(--f-mono);
+    margin-top: 4px;
 }
 
-/* ── Results table color coding — WT col 2, TAT col 3 ── */
-#results-body td:nth-child(2) { color: var(--p-lavender); font-family: var(--f-mono); font-size: 0.85rem; }
-#results-body td:nth-child(3) { color: var(--p-mint);     font-family: var(--f-mono); font-size: 0.85rem; }
+#results-body td strong {
+    color: var(--text); /* Uses the main text color for stronger contrast against the row background */
+    font-family: var(--f-mono);
+    font-size: 0.85rem;
+}
 
-/* ── Comparison table ── */
-#comparison-body tr.best-row td { background: rgba(52,211,153,0.06); }
-#comparison-body tr td:first-child { text-align: left; padding-left: 20px; border-left: 3px solid transparent; }
-#comparison-body tr.best-row td:first-child { border-left-color: var(--green); }
+/* ── Results table color coding ── */
+#results-body td:nth-child(2) { 
+    color: var(--accent); /* Adapts automatically based on your theme variables */
+    font-family: var(--f-mono); 
+    font-size: 0.9rem; /* Bumped up slightly */
+    font-weight: 600; 
+}
 
+#results-body td:nth-child(3) { 
+    color: #059669; /* Darker emerald green for light mode contrast */
+    font-family: var(--f-mono); 
+    font-size: 0.9rem; 
+    font-weight: 600; 
+}
+
+/* Keep the bright mint green only for dark mode */
+[data-theme="dark"] #results-body td:nth-child(3) {
+    color: var(--p-mint);
+}
+
+/* ── Comparison Table Fixes & Enhancements ── */
+
+/* 1. Fix the missing green variable with proper contrast */
 td.best-val {
-    color: var(--green);
+    color: #10b981; /* Bright emerald for dark mode */
     font-weight: 700;
     font-family: var(--f-mono);
 }
-td.best-val::after { content: ' ★'; font-size: 0.65rem; }
+
+[data-theme="light"] td.best-val {
+    color: #059669; /* Darker, highly readable emerald for light mode */
+}
+
+td.best-val::after { 
+    content: ' ★'; 
+    font-size: 0.75rem; 
+    opacity: 0.8;
+}
+
+/* 2. Soften the background highlight */
+#comparison-body tr.best-row td { 
+    background: rgba(16, 185, 129, 0.08); 
+    border-bottom-color: transparent; /* Clean look without internal borders */
+}
+
+[data-theme="light"] #comparison-body tr.best-row td { 
+    background: rgba(5, 150, 105, 0.06); 
+}
+
+/* 3. Align the first column */
+#comparison-body tr td:first-child { 
+    text-align: left; 
+    padding-left: 20px; 
+    border-left: 3px solid transparent; 
+}
+
+/* 4. Style the winning accent border & round the edges to match the hover states */
+#comparison-body tr.best-row td:first-child { 
+    border-left-color: #10b981; 
+    border-top-left-radius: var(--r-md);
+    border-bottom-left-radius: var(--r-md);
+}
+
+[data-theme="light"] #comparison-body tr.best-row td:first-child { 
+    border-left-color: #059669; 
+}
+
+#comparison-body tr.best-row td:last-child {
+    border-top-right-radius: var(--r-md);
+    border-bottom-right-radius: var(--r-md);
+}
 
 /* ================================================================
    TOAST
@@ -926,4 +1055,45 @@ td.best-val::after { content: ' ★'; font-size: 0.65rem; }
     .out-card { padding: 22px 18px; }
     .panel { padding: 22px 18px; }
     .topbar { padding: 0 18px; }
+}
+
+/* ── Results Table Row Hover Effect ── */
+#results-body tr td {
+    transition: background var(--t) ease, color var(--t) ease;
+}
+
+/* Round the edges of the highlight so it looks like a soft pill */
+#results-body tr td:first-child {
+    border-top-left-radius: var(--r-md);
+    border-bottom-left-radius: var(--r-md);
+}
+#results-body tr td:last-child {
+    border-top-right-radius: var(--r-md);
+    border-bottom-right-radius: var(--r-md);
+}
+
+/* Dark mode hover highlight (soft glowing lavender) */
+#results-body tr:hover td {
+    background: rgba(196, 181, 253, 0.08); 
+    border-bottom-color: transparent; /* Hides the bottom border on hover for a cleaner look */
+}
+
+/* Light mode hover highlight (subtle pastel lavender) */
+[data-theme="light"] #results-body tr:hover td {
+    background: rgba(124, 108, 240, 0.05); 
+    border-bottom-color: transparent;
+}
+
+/* Ensure SVGs inside buttons align perfectly with text */
+.btn svg {
+    width: 1.15em;
+    height: 1.15em;
+    flex-shrink: 0;
+    margin-top: -1px; /* Optical vertical alignment */
+}
+
+.topbar-icon {
+    display: flex; /* Keeps the spinning gear perfectly centered */
+    align-items: center;
+    justify-content: center;
 }
