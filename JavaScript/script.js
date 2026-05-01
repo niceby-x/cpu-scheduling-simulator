@@ -23,17 +23,34 @@ document.addEventListener("DOMContentLoaded", () => {
         "PRIORITY_RR": "Combination of priority and round-robin. Processes compete by priority first; ties within a priority level are broken by round-robin."
     };
 
-    // ── Toast ──────────────────────────────────────────────────────────────
+    // ── Toast Notification ─────────────────────────────────────────
     function showToast(message, type = "error") {
         const container = document.getElementById("toast-container");
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
-        toast.textContent = message;
+
+        // Create embedded SVG icons
+        const successIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        const errorIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+
+        toast.innerHTML = `
+            <div class="toast-icon">${type === 'success' ? successIcon : errorIcon}</div>
+            <div class="toast-message">${message}</div>
+        `;
+
         container.appendChild(toast);
-        setTimeout(() => toast.classList.add("show"), 10);
+        
+        // A tiny delay ensures the browser registers the element before animating
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                toast.classList.add("show");
+            });
+        });
+
+        // Remove after 3 seconds
         setTimeout(() => {
             toast.classList.remove("show");
-            setTimeout(() => toast.remove(), 420);
+            setTimeout(() => toast.remove(), 500); // Matches the CSS transition duration
         }, 3000);
     }
 
@@ -130,7 +147,15 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("algo-description").textContent = algoDescriptions[algorithmSelect.value];
 
     // ── Add process button ─────────────────────────────────────────────────
-    addProcessBtn.addEventListener("click", () => addProcessRow(0, 1, 1));
+    addProcessBtn.addEventListener("click", () => {
+        const currentRows = document.querySelectorAll("#process-body tr").length;
+        addProcessRow(0, 0, 0);
+        
+        // Only show the success toast if we actually added a row (limit is 10)
+        if (currentRows < 10) {
+            showToast("New process added.", "success");
+        }
+    });
 
     function addProcessRow(at = 0, bt = 1, priority = 1) {
         const currentRows = document.querySelectorAll("#process-body tr").length;
@@ -163,6 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (document.querySelectorAll("#process-body tr").length > 3) {
                 tr.remove();
                 updateProcessIDs();
+                showToast("Process removed.", "success");
             } else {
                 showToast("You need at least 3 processes.", "error");
             }
@@ -211,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
             out.style.display = "flex";
             renderGanttChart(result.gantt, result.totalTime);
             renderTable(result.processes);
-            showToast("Simulation complete! ✅", "success");
+            showToast("Simulation complete!", "success");
             out.scrollIntoView({ behavior: "smooth", block: "start" });
         }
     });
@@ -524,6 +550,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("output-section").style.display     = "none";
         document.getElementById("comparison-section").style.display = "none";
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Show the reset notification
+        showToast("Simulator reset to default.", "success");
     });
 
     // ── Export to Styled Excel (.xlsx) using ExcelJS ────────────────────────
@@ -706,6 +735,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        showToast("Multi-sheet Report generated! ✨", "success");
+        showToast("Multi-sheet Report generated!", "success");
     });
 });

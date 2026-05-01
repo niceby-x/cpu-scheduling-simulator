@@ -867,6 +867,38 @@ td input[type="number"]:focus {
     border-color: rgba(124, 108, 240, 0.2);
 }
 
+/* ── Grand Finale Export Button ── */
+.export-section {
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+    animation: fadeUp 0.6s var(--out) both;
+    animation-delay: 0.2s; /* Waits slightly for the stats to load first */
+}
+
+.grand-finale-btn {
+    width: 100%;
+    max-width: 420px; /* Keeps it wide, but stops it from stretching across massive screens */
+    padding: 16px 24px;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    border-radius: var(--r-lg);
+    box-shadow: 0 8px 32px rgba(196,181,253,0.35), inset 0 1px 0 rgba(255,255,255,0.4);
+}
+
+.grand-finale-btn:hover {
+    box-shadow: 0 12px 40px rgba(196,181,253,0.50);
+    transform: translateY(-3px);
+}
+
+[data-theme="light"] .grand-finale-btn {
+    box-shadow: 0 8px 32px rgba(124,108,240,0.30), inset 0 1px 0 rgba(255,255,255,0.4);
+}
+
+[data-theme="light"] .grand-finale-btn:hover {
+    box-shadow: 0 12px 40px rgba(124,108,240,0.45);
+}
+
 /* Style the new SVG icons */
 .stat-icon svg {
     width: 20px;
@@ -989,16 +1021,17 @@ td.best-val::after {
 }
 
 /* ================================================================
-   TOAST
+   TOAST NOTIFICATIONS
    ================================================================ */
 .toast-container {
     position: fixed;
-    bottom: 28px;
-    right: 28px;
+    bottom: 32px;
+    right: 32px;
     z-index: 9999;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+    pointer-events: none; /* Let clicks pass through empty space */
 }
 
 .toast {
@@ -1006,21 +1039,64 @@ td.best-val::after {
     backdrop-filter: blur(24px) saturate(200%);
     -webkit-backdrop-filter: blur(24px) saturate(200%);
     border: 1px solid var(--glass-border);
-    border-left: 3px solid var(--cyan);
     color: var(--text);
-    padding: 14px 20px;
+    padding: 14px 20px 14px 14px; 
     border-radius: var(--r-lg);
-    box-shadow: var(--glass-shadow);
-    font-size: 0.85rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    font-size: 0.9rem;
     font-weight: 500;
-    max-width: 300px;
-    transform: translateX(130%);
+    font-family: var(--f-body);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: max-content; 
+    max-width: 350px; 
+    transform: translateY(20px) scale(0.95);
     opacity: 0;
-    transition: all 0.4s cubic-bezier(0.68, -0.4, 0.27, 1.4);
+    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: auto; 
 }
-.toast.show { transform: translateX(0); opacity: 1; }
-.toast.error   { border-left-color: var(--danger); }
-.toast.success { border-left-color: var(--green); }
+
+[data-theme="light"] .toast {
+    box-shadow: 0 10px 40px rgba(100, 80, 180, 0.12);
+}
+
+.toast.show { 
+    transform: translateY(0) scale(1); 
+    opacity: 1; 
+}
+
+/* Icon Container */
+.toast-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Success styling (Mint) */
+.toast.success .toast-icon {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.15);
+}
+[data-theme="light"] .toast.success .toast-icon {
+    color: #059669;
+    background: rgba(5, 150, 105, 0.15);
+}
+
+/* Error styling (Danger/Rose) */
+.toast.error .toast-icon {
+    color: var(--danger);
+    background: var(--danger-dim);
+}
+
+.toast-message {
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+}
 
 /* ================================================================
    ANIMATIONS
