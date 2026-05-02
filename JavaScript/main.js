@@ -23,7 +23,9 @@ import {
     addProcessRow, 
     loadDefaultProcesses, 
     renderGanttChart, 
-    renderTable 
+    renderTable,
+    enforceStrictInput,
+    renderPlaybackStep
 } from './ui.js';
 
 import { generateExcelReport } from './export.js';
@@ -42,10 +44,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const quantumContainer= document.getElementById("quantum-container");
     const quantumInput    = document.getElementById("quantum");
 
+    // Playback State
+    let playbackState = { active: false, t: 0, interval: null, gantt: null, processes: null, totalTime: 0 };
+    const playbackToggle = document.getElementById("playback-toggle");
+    const playbackControls = document.getElementById("playback-controls");
+    const systemState = document.getElementById("system-state");
+    const stepBtn = document.getElementById("step-btn");
+    const autoPlayBtn = document.getElementById("auto-play-btn");
+
+    playbackToggle.addEventListener("change", (e) => {
+        simulateBtn.innerHTML = e.target.checked 
+            ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Start Playback`
+            : `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Run`;
+    });
+
     // Initialize Default State
     loadDefaultProcesses();
     document.getElementById("algo-description").textContent = algoDescriptions[algorithmSelect.value];
 
+    // Inside main.js DOMContentLoaded block:
+    enforceStrictInput(quantumInput, 1, 100);
+    
     // ── UI Event Listeners ──────────────────────────────────────────────
     
     // Algorithm selection
@@ -108,22 +127,82 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (result) {
-            // Save state for exporting
             const algoName = algorithmSelect.options[algorithmSelect.selectedIndex].text;
             currentSimulationData = { algoName, result };
-            
-            // Delegate rendering to ui.js
             const tag = document.getElementById("algo-tag");
             if (tag) tag.textContent = algoName;
 
             const out = document.getElementById("output-section");
             out.style.display = "flex";
             
-            renderGanttChart(result.gantt, result.totalTime);
-            renderTable(result.processes);
+            // Elements to hide during playback
+            const resultsCard = document.getElementById("results-table").closest(".out-card");
+            const statsRow = document.querySelector(".stats-row");
+            const exportSec = document.querySelector(".export-section");
+
+            if (playbackToggle.checked) {
+                // Setup Playback Mode
+                clearInterval(playbackState.interval);
+                playbackState = { active: true, t: 0, gantt: result.gantt, processes: result.processes, totalTime: result.totalTime, interval: null };
+                
+                playbackControls.style.display = "flex";
+                systemState.style.display = "block";
+                resultsCard.style.display = "none";
+                statsRow.style.display = "none";
+                exportSec.style.display = "none";
+                
+                autoPlayBtn.innerHTML = "Auto-Play ▶";
+                renderPlaybackStep(result.gantt, result.processes, 0, result.totalTime);
+            } else {
+                // Instant Mode
+                playbackControls.style.display = "none";
+                systemState.style.display = "none";
+                resultsCard.style.display = "block";
+                statsRow.style.display = "grid";
+                exportSec.style.display = "flex";
+
+                renderGanttChart(result.gantt, result.totalTime);
+                renderTable(result.processes);
+            }
             
-            showToast("Simulation complete!", "success");
+            showToast("Simulation generated!", "success");
             out.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    });
+
+    // ── Playback Logic ────────────────────────────────────────────────
+    function stepPlayback() {
+        if (playbackState.t < playbackState.totalTime) {
+            playbackState.t++;
+            renderPlaybackStep(playbackState.gantt, playbackState.processes, playbackState.t, playbackState.totalTime);
+        }
+        
+        if (playbackState.t >= playbackState.totalTime) {
+            clearInterval(playbackState.interval);
+            playbackState.interval = null;
+            autoPlayBtn.innerHTML = "Auto-Play ▶";
+            
+            // Un-hide the final stats when finished
+            document.getElementById("results-table").closest(".out-card").style.display = "block";
+            document.querySelector(".stats-row").style.display = "grid";
+            document.querySelector(".export-section").style.display = "flex";
+            renderTable(playbackState.processes); 
+            showToast("Playback finished!", "success");
+        }
+    }
+
+    stepBtn.addEventListener("click", stepPlayback);
+
+    autoPlayBtn.addEventListener("click", () => {
+        if (playbackState.t >= playbackState.totalTime) return;
+        
+        if (playbackState.interval) {
+            clearInterval(playbackState.interval);
+            playbackState.interval = null;
+            autoPlayBtn.innerHTML = "Auto-Play ▶";
+        } else {
+            autoPlayBtn.innerHTML = "Pause ⏸";
+            playbackState.interval = setInterval(stepPlayback, 700);
         }
     });
 
@@ -174,8 +253,30 @@ document.addEventListener("DOMContentLoaded", () => {
             tbody.appendChild(tr);
         });
 
-        const section = document.getElementById("comparison-section");
-        section.style.display = "block";
-        section.scrollIntoView({ behavior: "smooth" });
+        const modal = document.getElementById("comparison-modal");
+        modal.classList.add("active");
+    });
+
+    // ── Modal Close Logic ────────────────────────────────────────────────
+    const closeModalBtn = document.getElementById("close-modal-btn");
+    const comparisonModal = document.getElementById("comparison-modal");
+
+    // Close when clicking the 'X'
+    closeModalBtn?.addEventListener("click", () => {
+        comparisonModal.classList.remove("active");
+    });
+
+    // Close when clicking the blurred background overlay
+    comparisonModal?.addEventListener("click", (e) => {
+        if (e.target === comparisonModal) {
+            comparisonModal.classList.remove("active");
+        }
+    });
+    
+    // Optional: Close on Escape key
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && comparisonModal.classList.contains("active")) {
+            comparisonModal.classList.remove("active");
+        }
     });
 });

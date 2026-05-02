@@ -96,6 +96,29 @@ export function validateProcesses(processes) {
     return true;
 }
 
+// Helper to restrict inputs in real-time
+export function enforceStrictInput(inputElement, minValue, maxValue = 9999) {
+    // 1. Block invalid keys instantly
+    inputElement.addEventListener('keydown', (e) => {
+        if (['e', 'E', '-', '+', '.'].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+    
+    // 2. Correct the value if they clear it, go too low, or go too high
+    inputElement.addEventListener('change', () => {
+        let val = parseInt(inputElement.value);
+        
+        if (isNaN(val) || val < minValue) {
+            inputElement.value = minValue;
+            showToast(`Value auto-corrected to minimum (${minValue}).`, "error");
+        } else if (val > maxValue) {
+            inputElement.value = maxValue;
+            showToast(`Value capped at maximum limit (${maxValue}).`, "error");
+        }
+    });
+}
+
 export function addProcessRow(at = 0, bt = 1, priority = 1) {
     const processBody = document.getElementById("process-body");
     const currentRows = document.querySelectorAll("#process-body tr").length;
@@ -124,6 +147,10 @@ export function addProcessRow(at = 0, bt = 1, priority = 1) {
     tr.querySelectorAll('input[type="number"]').forEach(inp =>
         inp.addEventListener('focus', function () { this.select(); })
     );
+
+    enforceStrictInput(tr.querySelector('.p-at'), 0, 999);
+    enforceStrictInput(tr.querySelector('.p-bt'), 1, 999);
+    enforceStrictInput(tr.querySelector('.p-priority'), 0, 99);
 
     tr.querySelector(".delete-btn").addEventListener("click", () => {
         if (document.querySelectorAll("#process-body tr").length > 3) {
@@ -179,29 +206,49 @@ export function renderGanttChart(gantt, totalTime) {
         else opt.push({ ...b });
     });
 
-    let cumPct = 0;
     opt.forEach((block, i) => {
-        const w = ((block.end - block.start) / totalTime) * 100;
+        const duration = block.end - block.start;
+        
+        // 1. Build the colored Gantt Block
         const div = document.createElement("div");
         div.className = `gantt-block ${block.id === 'Idle' ? 'idle' : ''}`;
         div.style.backgroundColor = block.color;
         div.textContent = block.id === 'Idle' ? '' : block.id;
-        div.style.width = '0%';
+        
+        // Start squished for the animation
+        div.style.flexGrow = '0';
+        div.style.flexBasis = '0px';
+        div.style.minWidth = '0px';
+        div.style.padding = '0';
         container.appendChild(div);
-        const tid = setTimeout(() => { div.style.width = `${w}%`; }, i * 110);
-        animationTimeouts.push(tid);
-        if (i === 0) createMarker(block.start, 0);
-        cumPct += w;
-        createMarker(block.end, cumPct);
-    });
 
-    function createMarker(t, pct) {
-        const s = document.createElement("span");
-        s.className = "time-marker";
-        s.style.left = `${pct}%`;
-        s.textContent = t;
-        timeline.appendChild(s);
-    }
+        // 2. Build the matching Timeline Block
+        const tDiv = document.createElement("div");
+        tDiv.className = "time-block";
+        
+        // Start squished for the animation
+        tDiv.style.flexGrow = '0';
+        tDiv.style.flexBasis = '0px';
+        tDiv.style.minWidth = '0px';
+        
+        let timeHTML = `<span class="time-marker">${block.end}</span>`;
+        if (i === 0) {
+            timeHTML = `<span class="time-marker start-marker">${block.start}</span>` + timeHTML;
+        }
+        tDiv.innerHTML = timeHTML;
+        timeline.appendChild(tDiv);
+
+        // 3. Animate the Flex-Grow expansion
+        const tid = setTimeout(() => { 
+            div.style.flexGrow = duration; 
+            div.style.minWidth = '40px'; 
+            div.style.padding = '0 4px';
+            
+            tDiv.style.flexGrow = duration; 
+            tDiv.style.minWidth = '40px'; 
+        }, i * 110);
+        animationTimeouts.push(tid);
+    });
 }
 
 export function renderTable(processes) {
@@ -230,4 +277,99 @@ export function renderTable(processes) {
     const n = processes.length;
     animateStat("avg-wt",  (tWt  / n).toFixed(2));
     animateStat("avg-tat", (tTat / n).toFixed(2));
+}
+
+export function renderPlaybackStep(gantt, processes, t, totalTime) {
+    if (totalTime === 0) return;
+    const container = document.getElementById("gantt-chart");
+    const timeline  = document.getElementById("gantt-timeline");
+    container.innerHTML = ""; timeline.innerHTML = "";
+    
+    // 1. Find blocks that occur before or during current time 't'
+    let blocksUpToT = [];
+    for (let block of gantt) {
+        if (block.start >= t) break; 
+        let displayEnd = Math.min(block.end, t);
+        blocksUpToT.push({ ...block, end: displayEnd, duration: displayEnd - block.start });
+    }
+
+    // 2. Render those specific blocks
+    blocksUpToT.forEach((block, i) => {
+        const div = document.createElement("div");
+        div.className = `gantt-block ${block.id === 'Idle' ? 'idle' : ''}`;
+        div.style.backgroundColor = block.color;
+        div.textContent = block.id === 'Idle' ? '' : block.id;
+        div.style.flexGrow = block.duration;
+        div.style.minWidth = '40px';
+        div.style.padding = '0 4px';
+        // Note: No transition so it instantly snaps during step-by-step
+        div.style.transition = 'none'; 
+        container.appendChild(div);
+
+        const tDiv = document.createElement("div");
+        tDiv.className = "time-block";
+        tDiv.style.flexGrow = block.duration;
+        tDiv.style.minWidth = '40px';
+        tDiv.style.transition = 'none';
+        
+        let timeHTML = `<span class="time-marker">${block.end}</span>`;
+        if (i === 0) timeHTML = `<span class="time-marker start-marker">${block.start}</span>` + timeHTML;
+        tDiv.innerHTML = timeHTML;
+        timeline.appendChild(tDiv);
+    });
+
+    // 3. Add invisible "Future" padding to preserve the Flexbox scale perfectly
+    let futureDuration = totalTime - t;
+    if (futureDuration > 0) {
+        const fDiv = document.createElement("div");
+        fDiv.style.flexGrow = futureDuration;
+        fDiv.style.minWidth = '0px'; 
+        container.appendChild(fDiv);
+        const fTDiv = document.createElement("div");
+        fTDiv.style.flexGrow = futureDuration;
+        fTDiv.style.minWidth = '0px';
+        timeline.appendChild(fTDiv);
+    }
+
+    // 4. Update the visual System State (CPU vs Ready Queue)
+    document.getElementById("current-t").textContent = t;
+    const activeBlock = blocksUpToT[blocksUpToT.length - 1];
+    const cpuState = document.getElementById("cpu-state");
+    
+    if (!activeBlock || activeBlock.id === 'Idle') {
+        cpuState.textContent = "Idle";
+        cpuState.style.background = "var(--input-bg)";
+        cpuState.style.color = "var(--text-sub)";
+    } else {
+        cpuState.textContent = activeBlock.id;
+        cpuState.style.background = activeBlock.color;
+        cpuState.style.color = "#fff";
+    }
+
+    // Calculate how much time each process has executed so far
+    let execTimes = {};
+    processes.forEach(p => execTimes[p.id] = 0);
+    blocksUpToT.forEach(b => { if (b.id !== 'Idle') execTimes[b.id] += b.duration; });
+
+    // Populate Ready Queue
+    const readyQueueContainer = document.getElementById("ready-queue");
+    readyQueueContainer.innerHTML = "";
+    let inQueue = 0;
+    
+    [...processes].sort((a,b) => a.at - b.at).forEach(p => {
+        const isActive = activeBlock && activeBlock.id === p.id;
+        // If it arrived, hasn't finished, and isn't on the CPU, it's waiting!
+        if (p.at <= t && execTimes[p.id] < p.bt && !isActive) {
+            const badge = document.createElement("span");
+            badge.className = "algo-pill";
+            badge.style.background = `rgba(255,255,255,0.08)`;
+            badge.style.border = `1px solid ${p.color}`;
+            badge.style.color = p.color;
+            badge.textContent = p.id;
+            readyQueueContainer.appendChild(badge);
+            inQueue++;
+        }
+    });
+    
+    if (inQueue === 0) readyQueueContainer.innerHTML = "<span style='color: var(--text-dim); font-size: 0.8rem; padding-top: 4px;'>Queue Empty</span>";
 }

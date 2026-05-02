@@ -716,11 +716,13 @@ td input[type="number"]:focus {
 .gantt-container {
     display: flex;
     height: 72px;
-    border-radius: 100px; /* pill-shaped overall bar */
+    border-radius: 100px;
     overflow: hidden;
     border: 1px solid var(--glass-border);
     background: rgba(255,255,255,0.02);
-    min-width: 500px;
+    /* Update these two lines: */
+    min-width: 100%; 
+    width: max-content; 
     box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
 }
 
@@ -737,11 +739,14 @@ td input[type="number"]:focus {
     overflow: hidden;
     white-space: nowrap;
     transition: width 0.7s var(--spring);
-    
-    /* Replaced simple border with an inset shadow for depth */
     box-shadow: inset -1px 0 0 rgba(255,255,255,0.15), inset 1px 0 0 rgba(0,0,0,0.05);
     letter-spacing: 0.03em;
     position: relative;
+    
+    /* Add these three lines to prevent squishing: */
+    min-width: 40px; 
+    flex-shrink: 0; 
+    padding: 0 4px;
 }
 
 /* Gloss sheen */
@@ -794,24 +799,50 @@ td input[type="number"]:focus {
     background-color: rgba(196, 181, 253, 0.6);
 }
 
+/* ── Upgraded Timeline Layout ── */
 .timeline {
+    display: flex;             /* Matches the gantt-container */
+    height: 36px;              /* Extra height for the staggered text */
+    margin-top: 8px;
+    min-width: 100%;
+    width: max-content;        /* Allows scrolling if blocks get wide */
+}
+
+.time-block {
     position: relative;
-    height: 24px;
-    margin-top: 14px; /* Added slightly more space below the bar */
-    min-width: 500px;
-    
-    /* Prevent edge markers from clipping */
-    margin-left: 10px;
-    width: calc(100% - 20px);
+    min-width: 40px;           /* CRITICAL: Must match .gantt-block min-width */
+    flex-shrink: 0;
+    transition: width 0.7s var(--spring);
 }
 
 .time-marker {
     position: absolute;
-    transform: translateX(-50%);
+    right: 0;
+    transform: translateX(50%);
     font-family: var(--f-mono);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: var(--text-dim);
-    font-weight: 500;
+    font-weight: 600;
+    top: 0;
+    transition: color var(--t);
+}
+
+/* The start marker (0) for the very first block */
+.time-marker.start-marker {
+    left: 0;
+    right: auto;
+    transform: translateX(-50%);
+}
+
+/* ── The Magic Stagger ── 
+   Alternates the vertical position of every other number so they never overlap */
+.time-block:nth-child(even) .time-marker:not(.start-marker) {
+    top: 16px; 
+    color: var(--p-lavender); /* Soft color shift to make reading easier */
+}
+
+[data-theme="light"] .time-block:nth-child(even) .time-marker:not(.start-marker) {
+    color: var(--accent);
 }
 
 /* ── Stats row — 2 cards only (WT + TAT) ── */
@@ -1172,4 +1203,116 @@ td.best-val::after {
     display: flex; /* Keeps the spinning gear perfectly centered */
     align-items: center;
     justify-content: center;
+}
+
+/* ================================================================
+   COMPARISON MODAL
+   ================================================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(10, 8, 20, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    
+    /* Animation defaults */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t) ease;
+}
+
+[data-theme="light"] .modal-overlay {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-content {
+    width: 100%;
+    max-width: 650px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+    
+    /* Slide up animation */
+    transform: translateY(30px) scale(0.98);
+    transition: transform 0.4s var(--out);
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0) scale(1);
+}
+
+/* Ensure the header flexbox aligns the close button nicely */
+#comparison-section .out-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+/* ================================================================
+   GANTT CHART FLEXBOX FIX
+   ================================================================ */
+
+.gantt-container, .timeline {
+    width: 100%; /* Forces the container to fit perfectly on screen */
+    min-width: 100%;
+}
+
+.gantt-block, .time-block {
+    flex-shrink: 1 !important; /* CRITICAL: Allows P1 to shrink so P2 and P3 can fit */
+    transition: flex-grow 0.7s var(--spring), min-width 0.7s var(--spring), padding 0.7s var(--spring) !important;
+}
+
+/* ================================================================
+   TOGGLE SWITCH
+   ================================================================ */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    transition: .3s;
+    border-radius: 34px;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 4px;
+    bottom: 4px;
+    background-color: var(--text-sub);
+    transition: .3s;
+    border-radius: 50%;
+}
+input:checked + .slider {
+    background-color: rgba(196,181,253,0.15);
+    border-color: rgba(196,181,253,0.4);
+}
+input:checked + .slider:before {
+    transform: translateX(20px);
+    background-color: var(--p-lavender);
+}
+
+[data-theme="light"] input:checked + .slider {
+    background-color: rgba(124,108,240,0.15);
+    border-color: rgba(124,108,240,0.4);
+}
+[data-theme="light"] input:checked + .slider:before {
+    background-color: var(--accent);
 }

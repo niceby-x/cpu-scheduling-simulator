@@ -81,6 +81,14 @@
                         <button class="q-btn" id="q-inc">+</button>
                     </div>
                 </div>
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; padding-top: 10px; border-top: 1px solid var(--glass-border);">
+                    <span class="panel-label" style="margin:0;">Step-by-Step Playback</span>
+                    <label class="switch">
+                        <input type="checkbox" id="playback-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
 
                 <div class="config-actions">
                     <button id="simulate-btn" class="btn primary">
@@ -150,6 +158,25 @@
                     <div class="gantt-container" id="gantt-chart"></div>
                     <div class="timeline" id="gantt-timeline"></div>
                 </div>
+
+                <div id="playback-controls" style="display:none; gap: 10px; margin-top: 16px; justify-content: center;">
+                    <button id="step-btn" class="btn primary small">Next Step ⏭</button>
+                    <button id="auto-play-btn" class="btn glass-btn small">Auto-Play ▶</button>
+                </div>
+            
+                <div id="system-state" class="glass" style="display:none; margin-top: 16px; padding: 16px; background: rgba(0,0,0,0.05); border-radius: var(--r-md); border: 1px solid var(--glass-border);">
+                    <p class="panel-label" style="margin-bottom: 12px;">System State (Time = <span id="current-t" style="color:var(--text); font-size: 0.8rem;">0</span>)</p>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <div style="min-width: 100px;">
+                            <span class="stat-unit" style="display:block; margin-bottom:6px;">CPU</span> 
+                            <span id="cpu-state" class="badge">Idle</span>
+                        </div>
+                        <div style="flex: 1;">
+                            <span class="stat-unit" style="display:block; margin-bottom:6px;">READY QUEUE</span>
+                            <div id="ready-queue" style="display:flex; gap: 8px; flex-wrap: wrap; min-height: 24px;"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Results table -->
@@ -210,22 +237,27 @@
         </div><!-- /#output-section -->
 
         <!-- Comparison -->
-        <div id="comparison-section" class="glass out-card" style="display:none; margin-top:20px;">
-            <div class="out-card-header">
-                <p class="panel-label">Algorithm Comparison</p>
-                <span class="badge">Lower = Better ↓</span>
-            </div>
-            <div class="table-responsive">
-                <table id="comparison-table">
-                    <thead>
-                        <tr>
-                            <th style="text-align:left; padding-left:20px;">Algorithm</th>
-                            <th>Avg Waiting</th>
-                            <th>Avg Turnaround</th>
-                        </tr>
-                    </thead>
-                    <tbody id="comparison-body"></tbody>
-                </table>
+        <div id="comparison-modal" class="modal-overlay" aria-hidden="true">
+            <div id="comparison-section" class="glass out-card modal-content">
+                <div class="out-card-header">
+                    <div>
+                        <p class="panel-label">Algorithm Comparison</p>
+                        <span class="badge">Lower = Better ↓</span>
+                    </div>
+                    <button id="close-modal-btn" class="btn icon-btn" title="Close">✕</button>
+                </div>
+                <div class="table-responsive">
+                    <table id="comparison-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left; padding-left:20px;">Algorithm</th>
+                                <th>Avg Waiting</th>
+                                <th>Avg Turnaround</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comparison-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
