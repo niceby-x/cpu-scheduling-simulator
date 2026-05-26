@@ -81,11 +81,13 @@ const store = {
     notify() { this.listeners.forEach(fn => fn(this.state)); },
 
     setSimulationData(algoName, result) {
+        // simulationData is completely replaced, which is safe
         this.state.simulationData = { algoName, result };
     },
 
     startPlayback(gantt, processes, totalTime) {
         this.stopAutoPlay();
+        // Replaces the entire playback object with a new reference
         this.state.playback = { active: true, t: 0, interval: null, gantt, processes, totalTime, finishedNotified: false };
         this.notify();
     },
@@ -93,10 +95,15 @@ const store = {
     stepPlayback() {
         const pb = this.state.playback;
         if (pb.t < pb.totalTime) {
-            pb.t++;
+            // IMMUTABLE UPDATE: Create a new object with the incremented 't'
+            this.state.playback = { ...pb, t: pb.t + 1 };
             this.notify();
         }
-        if (pb.t >= pb.totalTime) this.stopAutoPlay();
+        
+        // Evaluate against the newly updated state, not the old 'pb' reference
+        if (this.state.playback.t >= this.state.playback.totalTime) {
+            this.stopAutoPlay();
+        }
     },
 
     toggleAutoPlay() {
@@ -106,16 +113,21 @@ const store = {
         if (pb.interval) {
             this.stopAutoPlay();
         } else {
-            // Arrow function ensures 'this' remains the store inside setInterval
-            pb.interval = setInterval(() => this.stepPlayback(), 700);
+            // IMMUTABLE UPDATE: Safely update the interval ID
+            this.state.playback = { 
+                ...pb, 
+                interval: setInterval(() => this.stepPlayback(), 700) 
+            };
             this.notify();
         }
     },
 
     stopAutoPlay() {
-        if (this.state.playback.interval) {
-            clearInterval(this.state.playback.interval);
-            this.state.playback.interval = null;
+        const pb = this.state.playback;
+        if (pb.interval) {
+            clearInterval(pb.interval);
+            // IMMUTABLE UPDATE: Clear the interval safely
+            this.state.playback = { ...pb, interval: null };
             this.notify();
         }
     },
@@ -123,7 +135,8 @@ const store = {
     reset() {
         this.stopAutoPlay();
         this.state.simulationData = null;
-        this.state.playback.active = false;
+        // IMMUTABLE UPDATE: Update the active flag safely
+        this.state.playback = { ...this.state.playback, active: false };
     }
 };
 
@@ -136,14 +149,21 @@ document.addEventListener("DOMContentLoaded", () => {
     // ── DOM Element References ────────────────────────────────────────
     // Cache references to frequently used UI elements to avoid repeated
     // document.getElementById calls throughout the event handlers.
-    const addProcessBtn   = document.getElementById("add-process-btn");
-    const simulateBtn     = document.getElementById("simulate-btn");
-    const compareBtn      = document.getElementById("compare-btn");
-    const resetBtn        = document.getElementById("reset-btn");
-    const exportBtn       = document.getElementById("export-btn");
-    const algorithmSelect = document.getElementById("algorithm");
-    const quantumContainer= document.getElementById("quantum-container");
-    const quantumInput    = document.getElementById("quantum");
+    const addProcessBtn    = document.getElementById("add-process-btn");
+    const simulateBtn      = document.getElementById("simulate-btn");
+    const compareBtn       = document.getElementById("compare-btn");
+    const resetBtn         = document.getElementById("reset-btn");
+    const exportBtn        = document.getElementById("export-btn");
+    const algorithmSelect  = document.getElementById("algorithm");
+    const quantumContainer = document.getElementById("quantum-container");
+    const quantumInput     = document.getElementById("quantum");
+    
+    // Moved up: Initialize all playback-related DOM references BEFORE using them
+    const playbackToggle   = document.getElementById("playback-toggle");
+    const playbackControls = document.getElementById("playback-controls");
+    const systemState      = document.getElementById("system-state");
+    const stepBtn          = document.getElementById("step-btn");
+    const autoPlayBtn      = document.getElementById("auto-play-btn");
 
     // ── Playback State Object ─────────────────────────────────────────
     // Tracks all state needed to drive the step-by-step playback feature.
@@ -157,6 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ── Store Subscriber (Reactive UI Updates) ────────────────────────
     // Automatically handles rendering the step-by-step frames and button 
     // states whenever the playback state changes.
+    // SAFE: autoPlayBtn and other references are now guaranteed to be initialized.
     store.subscribe((state) => {
         const pb = state.playback;
         if (!pb.active) return; // Only react if playback is currently active
@@ -181,12 +202,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     });
-
-    const playbackToggle  = document.getElementById("playback-toggle");
-    const playbackControls= document.getElementById("playback-controls");
-    const systemState     = document.getElementById("system-state");
-    const stepBtn         = document.getElementById("step-btn");
-    const autoPlayBtn     = document.getElementById("auto-play-btn");
 
     // ── Playback Toggle Label ─────────────────────────────────────────
     // Updates the Run button's label when the user switches between
