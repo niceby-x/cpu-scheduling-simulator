@@ -66,11 +66,66 @@ import {
 import { generateExcelReport } from './export.js';
 
 
-// ── Global Simulation State ───────────────────────────────────────────
-// Stores the most recent simulation result so it can be passed to the
-// Excel export function when the user clicks the Export button.
-// Initialized to null and updated every time a simulation is run.
-let currentSimulationData = null;
+// ── UI State Management (Mini-Store) ──────────────────────────────────
+// A lightweight reactive store that holds the application's state. 
+// Enforces a strict one-way data flow: UI events update the store, 
+// and the store notifies subscribers to reactively re-render the DOM.
+const store = {
+    state: {
+        simulationData: null,
+        playback: { active: false, t: 0, interval: null, gantt: null, processes: null, totalTime: 0, finishedNotified: false }
+    },
+    listeners: [],
+    
+    subscribe(listener) { this.listeners.push(listener); },
+    notify() { this.listeners.forEach(fn => fn(this.state)); },
+
+    setSimulationData(algoName, result) {
+        this.state.simulationData = { algoName, result };
+    },
+
+    startPlayback(gantt, processes, totalTime) {
+        this.stopAutoPlay();
+        this.state.playback = { active: true, t: 0, interval: null, gantt, processes, totalTime, finishedNotified: false };
+        this.notify();
+    },
+
+    stepPlayback() {
+        const pb = this.state.playback;
+        if (pb.t < pb.totalTime) {
+            pb.t++;
+            this.notify();
+        }
+        if (pb.t >= pb.totalTime) this.stopAutoPlay();
+    },
+
+    toggleAutoPlay() {
+        const pb = this.state.playback;
+        if (pb.t >= pb.totalTime) return;
+        
+        if (pb.interval) {
+            this.stopAutoPlay();
+        } else {
+            // Arrow function ensures 'this' remains the store inside setInterval
+            pb.interval = setInterval(() => this.stepPlayback(), 700);
+            this.notify();
+        }
+    },
+
+    stopAutoPlay() {
+        if (this.state.playback.interval) {
+            clearInterval(this.state.playback.interval);
+            this.state.playback.interval = null;
+            this.notify();
+        }
+    },
+
+    reset() {
+        this.stopAutoPlay();
+        this.state.simulationData = null;
+        this.state.playback.active = false;
+    }
+};
 
 
 // ── DOM Ready ─────────────────────────────────────────────────────────
@@ -98,7 +153,34 @@ document.addEventListener("DOMContentLoaded", () => {
     //   gantt     — the full Gantt chart array from the last simulation
     //   processes — the process list with computed metrics
     //   totalTime — the final clock tick; used as the stop condition
-    let playbackState = { active: false, t: 0, interval: null, gantt: null, processes: null, totalTime: 0 };
+
+    // ── Store Subscriber (Reactive UI Updates) ────────────────────────
+    // Automatically handles rendering the step-by-step frames and button 
+    // states whenever the playback state changes.
+    store.subscribe((state) => {
+        const pb = state.playback;
+        if (!pb.active) return; // Only react if playback is currently active
+
+        // 1. Render the current frame
+        renderPlaybackStep(pb.gantt, pb.processes, pb.t, pb.totalTime);
+        
+        // 2. Reactively update the play/pause button text
+        autoPlayBtn.innerHTML = pb.interval ? "Pause ⏸" : "Auto-Play ▶";
+
+        // 3. Check for completion and reveal results
+        if (pb.t > 0 && pb.t >= pb.totalTime) {
+            document.getElementById("results-table").closest(".out-card").style.display = "block";
+            document.querySelector(".stats-row").style.display  = "grid";
+            document.querySelector(".export-section").style.display = "flex";
+            renderTable(pb.processes);
+            
+            // Prevent the success toast from spamming if state triggers again
+            if (!pb.finishedNotified) {
+                showToast("Playback finished!", "success");
+                pb.finishedNotified = true; 
+            }
+        }
+    });
 
     const playbackToggle  = document.getElementById("playback-toggle");
     const playbackControls= document.getElementById("playback-controls");
@@ -148,19 +230,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // output and comparison sections, clears stored simulation data,
     // and scrolls the page back to the top.
     resetBtn?.addEventListener("click", () => {
+        store.reset();
         loadDefaultProcesses();
         document.getElementById("output-section").style.display = "none";
         document.getElementById("comparison-section").style.display = "none";
-        currentSimulationData = null;
         window.scrollTo({ top: 0, behavior: 'smooth' });
         showToast("Simulator reset to default.", "success");
     });
 
-    // ── Export ────────────────────────────────────────────────────────
-    // Passes the most recent simulation result to the Excel report
-    // generator. The button is only visible after a simulation has run.
     exportBtn?.addEventListener("click", () => {
-        generateExcelReport(currentSimulationData);
+        generateExcelReport(store.state.simulationData);
     });
 
 
@@ -207,50 +286,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (result) {
-            // Store the result globally so the Export button can access it later
             const algoName = algorithmSelect.options[algorithmSelect.selectedIndex].text;
-            currentSimulationData = { algoName, result };
+            store.setSimulationData(algoName, result); // Save to store
 
-            // Update the algorithm name tag shown above the output section
             const tag = document.getElementById("algo-tag");
             if (tag) tag.textContent = algoName;
 
-            // Make the output section visible
             const out = document.getElementById("output-section");
             out.style.display = "flex";
             
-            // References to UI sections that are hidden during active playback
             const resultsCard = document.getElementById("results-table").closest(".out-card");
             const statsRow    = document.querySelector(".stats-row");
             const exportSec   = document.querySelector(".export-section");
 
             if (playbackToggle.checked) {
-                // ── Playback Mode ──────────────────────────────────────
-                // Resets playback state with the new simulation result and
-                // renders the initial frame at t=0. Results and stats are
-                // hidden until playback finishes to preserve the animation flow.
-                clearInterval(playbackState.interval);
-                playbackState = {
-                    active: true,
-                    t: 0,
-                    gantt: result.gantt,
-                    processes: result.processes,
-                    totalTime: result.totalTime,
-                    interval: null
-                };
-                
+                // Prepare UI for playback
                 playbackControls.style.display = "flex";
                 systemState.style.display      = "block";
                 resultsCard.style.display      = "none";
                 statsRow.style.display         = "none";
                 exportSec.style.display        = "none";
                 
-                autoPlayBtn.innerHTML = "Auto-Play ▶";
-                renderPlaybackStep(result.gantt, result.processes, 0, result.totalTime);
+                // Dispatch to store (this automatically triggers the first render!)
+                store.startPlayback(result.gantt, result.processes, result.totalTime);
             } else {
-                // ── Instant Mode ───────────────────────────────────────
-                // Renders the complete Gantt chart and metrics table
-                // immediately without any step-by-step animation.
+                // Instant Mode
+                store.reset(); // Clear any lingering playback state
                 playbackControls.style.display = "none";
                 systemState.style.display      = "none";
                 resultsCard.style.display      = "block";
@@ -266,56 +327,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-
-    // ── Playback Step Function ────────────────────────────────────────
-    // Advances the playback by one clock tick and re-renders the frame.
-    // Called by both the Step button and the auto-play interval timer.
-    // When the final tick is reached, the auto-play timer is cleared,
-    // and the full results table and stats are revealed.
-    function stepPlayback() {
-        if (playbackState.t < playbackState.totalTime) {
-            playbackState.t++;
-            renderPlaybackStep(playbackState.gantt, playbackState.processes, playbackState.t, playbackState.totalTime);
-        }
-        
-        // Check if playback has reached the end of the simulation timeline
-        if (playbackState.t >= playbackState.totalTime) {
-            clearInterval(playbackState.interval);
-            playbackState.interval = null;
-            autoPlayBtn.innerHTML = "Auto-Play ▶";
-            
-            // Reveal the final results and statistics once playback is complete
-            document.getElementById("results-table").closest(".out-card").style.display = "block";
-            document.querySelector(".stats-row").style.display  = "grid";
-            document.querySelector(".export-section").style.display = "flex";
-            renderTable(playbackState.processes); 
-            showToast("Playback finished!", "success");
-        }
-    }
-
     // ── Step Button ───────────────────────────────────────────────────
     // Manually advances the playback by exactly one clock tick each click.
-    stepBtn.addEventListener("click", stepPlayback);
+    stepBtn.addEventListener("click", () => store.stepPlayback());
 
     // ── Auto-Play Button ──────────────────────────────────────────────
     // Toggles automatic playback. When active, stepPlayback() is called
     // every 700ms via setInterval. Clicking again pauses the animation
     // by clearing the interval. Does nothing if playback is already done.
-    autoPlayBtn.addEventListener("click", () => {
-        if (playbackState.t >= playbackState.totalTime) return;
-        
-        if (playbackState.interval) {
-            // Pause: stop the auto-play timer
-            clearInterval(playbackState.interval);
-            playbackState.interval = null;
-            autoPlayBtn.innerHTML = "Auto-Play ▶";
-        } else {
-            // Play: start advancing one tick every 700 milliseconds
-            autoPlayBtn.innerHTML = "Pause ⏸";
-            playbackState.interval = setInterval(stepPlayback, 700);
-        }
-    });
-
+    autoPlayBtn.addEventListener("click", () => store.toggleAutoPlay());
 
     // ── Comparison Logic ──────────────────────────────────────────────
     // Runs all seven scheduling algorithms on the same process input and
