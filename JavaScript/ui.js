@@ -58,6 +58,52 @@ export const algoDescriptions = {
 // from a previous simulation do not interfere with the new one.
 let animationTimeouts = [];
 
+// ─────────────────────────────────────────────────────────────────────
+// Interactive Tooltip Helper
+// Creates a floating glassmorphic card to display exact block stats.
+// ─────────────────────────────────────────────────────────────────────
+function attachTooltip(element, block, duration) {
+    element.addEventListener('mouseenter', () => {
+        let tt = document.getElementById('gantt-tooltip');
+        if (!tt) {
+            tt = document.createElement('div');
+            tt.id = 'gantt-tooltip';
+            tt.className = 'glass'; 
+            document.body.appendChild(tt);
+        }
+        
+        const title = block.id === 'Idle' ? 'CPU Idle' : `Process ${block.id}`;
+        const dot = block.id === 'Idle' 
+            ? `<span class="color-dot" style="background: transparent; border: 1px solid var(--text-dim);"></span>` 
+            : `<span class="color-dot" style="background: ${block.color};"></span>`;
+        
+        tt.innerHTML = `
+            <div class="tooltip-header">
+                ${dot}
+                <span>${title}</span>
+            </div>
+            <div class="tooltip-body">
+                <div><span>Start:</span> <span>${block.start}</span></div>
+                <div><span>End:</span> <span>${block.end}</span></div>
+                <div><span>Duration:</span> <span>${duration} units</span></div>
+            </div>
+        `;
+        tt.classList.add('visible');
+    });
+    
+    element.addEventListener('mousemove', (e) => {
+        const tt = document.getElementById('gantt-tooltip');
+        if (tt) {
+            tt.style.left = `${e.pageX + 15}px`;
+            tt.style.top = `${e.pageY + 15}px`;
+        }
+    });
+    
+    element.addEventListener('mouseleave', () => {
+        const tt = document.getElementById('gantt-tooltip');
+        if (tt) tt.classList.remove('visible');
+    });
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // showToast(message, type)
@@ -443,6 +489,8 @@ export function renderGanttChart(gantt, totalTime) {
         div.style.backgroundColor = block.color;
         div.textContent = block.id === 'Idle' ? '' : block.id;
         
+        attachTooltip(div, block, duration);
+
         // Start collapsed (zero width) so the flex-grow expansion is visible
         div.style.flexGrow   = '0';
         div.style.flexBasis  = '0px';
@@ -590,6 +638,9 @@ export function renderPlaybackStep(gantt, processes, t, totalTime) {
         div.style.minWidth  = '40px';
         div.style.padding   = '0 4px';
         div.style.transition = 'none'; // No CSS transition — snaps instantly per step
+        
+        attachTooltip(div, block, block.duration);
+        
         container.appendChild(div);
 
         const tDiv = document.createElement("div");

@@ -105,8 +105,6 @@ All algorithms handle gaps — if no process has arrived yet, an **Idle** block 
 
 ## 📸 Screenshots
 
-> _Add your own screenshots here_
-
 | Gantt Chart | Comparison Modal | Excel Export |
 |---|---|---|
 | ![gantt](assets/gantt.png) | ![compare](assets/compare.png) | ![excel](assets/excel.png) |

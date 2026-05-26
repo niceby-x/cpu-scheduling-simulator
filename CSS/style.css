@@ -2663,3 +2663,66 @@ input:checked + .slider:before {
 [data-theme="light"] input:checked + .slider:before {
     background-color: var(--accent);
 }
+
+/* ================================================================
+   GANTT INTERACTIVE TOOLTIP
+   ================================================================ */
+#gantt-tooltip {
+    position: absolute;
+    z-index: 10000;
+    pointer-events: none; /* Prevents the tooltip from interfering with hovers */
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+    transition: opacity 0.15s var(--out), transform 0.15s var(--out);
+    padding: 14px 18px;
+    border-radius: var(--r-md);
+    min-width: 180px;
+}
+
+#gantt-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--glass-border);
+    font-family: var(--f-mono);
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text);
+    letter-spacing: 0.02em;
+}
+
+.tooltip-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tooltip-body div {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--f-mono);
+    font-size: 0.75rem;
+}
+
+.tooltip-body div span:first-child {
+    color: var(--text-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tooltip-body div span:last-child {
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* Make sure the Gantt blocks indicate they are interactive */
+.gantt-block {
+    cursor: crosshair; /* Subtle hint that you can interact */
+}
