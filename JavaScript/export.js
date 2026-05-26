@@ -151,6 +151,36 @@ export async function generateExcelReport(simulationData) {
         currentRow++;
     });
 
+    // ── Conditional Formatting (Heatmaps) ─────────────────────────────
+    // Applies a native Excel Green-Yellow-Red color scale to the Waiting 
+    // Time (Column G) and Turnaround Time (Column H) cells.
+    const endDataRow = currentRow - 1; // The last row containing process data
+    if (endDataRow >= 9) {
+        const heatmapRule = {
+            type: 'colorScale',
+            cfvo: [
+                { type: 'min' },                   // Lowest value
+                { type: 'percentile', value: 50 }, // Median value
+                { type: 'max' }                    // Highest value
+            ],
+            color: [
+                { argb: 'FF10B981' }, // Emerald Green (Good / Low time)
+                { argb: 'FFFDE047' }, // Yellow (Medium time)
+                { argb: 'FFEF4444' }  // Red (Bad / High time)
+            ]
+        };
+
+        dataSheet.addConditionalFormatting({
+            ref: `G9:G${endDataRow}`, // Waiting Time column
+            rules: [heatmapRule]
+        });
+        
+        dataSheet.addConditionalFormatting({
+            ref: `H9:H${endDataRow}`, // Turnaround Time column
+            rules: [heatmapRule]
+        });
+    }
+
     // ── Averages Summary Row ──────────────────────────────────────────
     // Spans columns B–F with an "Averages" label, then places the
     // Average WT and Average TAT values in the final two columns.
