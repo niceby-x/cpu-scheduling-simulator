@@ -386,22 +386,19 @@ export function addProcessRow(at = 0, bt = 1, priority = 1) {
 // Clears the process table and populates it with a predefined set of
 // five sample processes used as the default state of the simulator.
 // Called on initial page load and whenever the Reset button is clicked.
-//
-// Default processes (AT=0 for all, varying BT):
-//   P1: BT=2, P2: BT=1, P3: BT=8, P4: BT=4, P5: BT=5
 // ─────────────────────────────────────────────────────────────────────
 export function loadDefaultProcesses() {
     const processBody = document.getElementById("process-body");
     processBody.innerHTML = ""; // Clear all existing rows first
 
-    // Add five default processes with varied burst times for demonstration
-    addProcessRow(0, 2, 0);
-    addProcessRow(0, 1, 0);
-    addProcessRow(0, 8, 0);
-    addProcessRow(0, 4, 0);
-    addProcessRow(0, 5, 0);
+    // Add five default processes with varied burst times and priorities for demonstration
+    // Arguments: addProcessRow(arrivalTime, burstTime, priority)
+    addProcessRow(0, 2, 2); // P1: Priority 2 (Medium)
+    addProcessRow(0, 1, 1); // P2: Priority 1 (High)
+    addProcessRow(0, 8, 4); // P3: Priority 4 (Low)
+    addProcessRow(0, 4, 3); // P4: Priority 3 (Medium-Low)
+    addProcessRow(0, 5, 2); // P5: Priority 2 (Medium)
 }
-
 
 // ─────────────────────────────────────────────────────────────────────
 // animateStat(id, targetValue)  [Internal — not exported]
@@ -673,10 +670,13 @@ export function renderPlaybackStep(gantt, processes, t, totalTime) {
     }
 
     // ── Step 4: Update the CPU State display ──────────────────────────
-    // Shows which process is currently running on the CPU at time t,
-    // or displays "Idle" if the last active block was an idle period.
+    // Shows which process is scheduled to run in the exact window [t, t+1).
     document.getElementById("current-t").textContent = t;
-    const activeBlock = blocksUpToT[blocksUpToT.length - 1];
+    
+    // Scan the full original gantt chart to find the active block at tick t.
+    // If t >= totalTime, the simulation is complete, so nothing is active.
+    const activeBlock = t < totalTime ? gantt.find(b => b.start <= t && b.end > t) : null;
+    
     const cpuState    = document.getElementById("cpu-state");
     
     if (!activeBlock || activeBlock.id === 'Idle') {
@@ -690,15 +690,17 @@ export function renderPlaybackStep(gantt, processes, t, totalTime) {
     }
 
     // ── Step 5: Rebuild the Ready Queue display ───────────────────────
-    // Computes how much CPU time each process has received so far by
-    // summing the durations of its Gantt blocks up to time t. A process
-    // is shown in the ready queue if it has arrived, has not finished,
-    // and is not the one currently running on the CPU.
-
-    // Tally executed time per process from the visible blocks
+    // Computes how much CPU time each process has received strictly BEFORE time t.
+    
     let execTimes = {};
     processes.forEach(p => execTimes[p.id] = 0);
-    blocksUpToT.forEach(b => { if (b.id !== 'Idle') execTimes[b.id] += b.duration; });
+    
+    // Tally executed time from the original gantt chart up to time t
+    gantt.forEach(b => {
+        if (b.id !== 'Idle' && b.start < t) {
+            execTimes[b.id] += Math.min(b.end, t) - b.start;
+        }
+    });
 
     const readyQueueContainer = document.getElementById("ready-queue");
     readyQueueContainer.innerHTML = "";

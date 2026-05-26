@@ -100,7 +100,7 @@ export async function generateExcelReport(simulationData) {
     dataSheet.getCell('C3').font  = { bold: true };
     
     dataSheet.getCell('B4').value = "Total Time:";
-    dataSheet.getCell('C4').value = `${result.totalTime} ms`;
+    dataSheet.getCell('C4').value = `${result.totalTime} time units`;
     
     dataSheet.getCell('B5').value = "Export Date:";
     dataSheet.getCell('C5').value = new Date().toLocaleDateString();
@@ -195,12 +195,20 @@ export async function generateExcelReport(simulationData) {
     avgLabelCell.alignment = { horizontal: 'right', vertical: 'middle' };
     avgLabelCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: palette.mint } };
 
-    // Read average values directly from the UI stat elements
+    // Calculate averages directly from the simulation result data
+    const totalProcesses = result.processes.length;
+    const totalWt = result.processes.reduce((sum, p) => sum + p.wt, 0);
+    const totalTat = result.processes.reduce((sum, p) => sum + p.tat, 0);
+    
+    // Default to 0 if there are no processes to avoid NaN, round to 2 decimals
+    const avgWt = totalProcesses > 0 ? Number((totalWt / totalProcesses).toFixed(2)) : 0;
+    const avgTat = totalProcesses > 0 ? Number((totalTat / totalProcesses).toFixed(2)) : 0;
+
     const avgWtCell  = dataSheet.getCell(currentRow, 7);
-    avgWtCell.value  = parseFloat(document.getElementById("avg-wt").textContent);
+    avgWtCell.value  = avgWt;
     
     const avgTatCell = dataSheet.getCell(currentRow, 8);
-    avgTatCell.value = parseFloat(document.getElementById("avg-tat").textContent);
+    avgTatCell.value = avgTat;
 
     // Apply mint fill and bold styling to both average value cells
     [7, 8].forEach(col => {
