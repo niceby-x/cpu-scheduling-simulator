@@ -312,25 +312,34 @@ export async function generateExcelReport(simulationData) {
     // The object URL is revoked immediately after the click to free memory.
     // =====================================================================
 
-    // Serialize the workbook to an ArrayBuffer using ExcelJS's async writer
-    const buffer = await workbook.xlsx.writeBuffer();
+    try {
+        // Serialize the workbook to an ArrayBuffer using ExcelJS's async writer
+        const buffer = await workbook.xlsx.writeBuffer();
 
-    // Wrap the buffer in a Blob with the correct MIME type for .xlsx files
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        // Wrap the buffer in a Blob with the correct MIME type for .xlsx files
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
-    // Create a temporary object URL pointing to the Blob in memory
-    const url = URL.createObjectURL(blob);
+        // Create a temporary object URL pointing to the Blob in memory
+        const url = URL.createObjectURL(blob);
 
-    // Build a hidden <a> element, set its download filename, and click it
-    const a      = document.createElement('a');
-    a.href       = url;
-    a.download   = `CPU_Scheduling_${algoName.replace(/\s+/g, '_')}.xlsx`; // e.g., CPU_Scheduling_Round_Robin.xlsx
-    document.body.appendChild(a);
-    a.click();
+        // Build a hidden <a> element, set its download filename, and click it
+        const a      = document.createElement('a');
+        a.href       = url;
+        a.download   = `CPU_Scheduling_${algoName.replace(/\s+/g, '_')}.xlsx`; // e.g., CPU_Scheduling_Round_Robin.xlsx
+        document.body.appendChild(a);
+        a.click();
 
-    // Clean up: remove the element and release the object URL from memory
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    showToast("Multi-sheet Report generated!", "success");
+        // Clean up: remove the element and release the object URL from memory
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast("Multi-sheet Report generated!", "success");
+        
+    } catch (error) {
+        // Log the actual error to the console for debugging
+        console.error("ExcelJS Export Failed:", error);
+        
+        // Notify the user via the UI toast system
+        showToast("Export failed. Please try again.", "error");
+    }
 }
