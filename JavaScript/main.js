@@ -236,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Shows a success toast if under the 10-process display limit.
     addProcessBtn.addEventListener("click", () => {
         const currentRows = document.querySelectorAll("#process-body tr").length;
-        addProcessRow(0, 0, 0);
+        addProcessRow();
         if (currentRows < 10) showToast("New process added.", "success");
     });
 
