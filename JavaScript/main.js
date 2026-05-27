@@ -344,6 +344,27 @@ document.addEventListener("DOMContentLoaded", () => {
     // by clearing the interval. Does nothing if playback is already done.
     autoPlayBtn.addEventListener("click", () => store.toggleAutoPlay());
 
+    // ── Keyboard Shortcuts (Playback Mode) ────────────────────────────
+    // Spacebar: Toggle Auto-Play (Play/Pause)
+    // Right Arrow: Step Forward
+    document.addEventListener("keydown", (e) => {
+        const pb = store.state.playback;
+        
+        // Only listen for shortcuts if Playback Mode is currently active
+        if (!pb.active) return;
+        
+        // Prevent shortcuts from firing if the user is somehow focused on an input field
+        if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+
+        if (e.code === "Space") {
+            e.preventDefault(); // Prevents the page from scrolling down
+            store.toggleAutoPlay();
+        } else if (e.code === "ArrowRight") {
+            e.preventDefault();
+            store.stepPlayback();
+        }
+    });
+    
     // ── Comparison Logic ──────────────────────────────────────────────
     // Runs all seven scheduling algorithms on the same process input and
     // displays their average Waiting Time and Turnaround Time side by side.
