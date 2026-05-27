@@ -1211,6 +1211,35 @@ input:checked + .slider:before {
 }
 
 /* ================================================================
+   LOADING STATE ANIMATIONS
+   ================================================================ */
+.btn.is-loading {
+    pointer-events: none; /* Prevents double-clicking */
+    opacity: 0.9;
+    animation: buttonPulse 1s infinite alternate var(--spring);
+}
+
+/* Makes the whole button pulse and glow */
+@keyframes buttonPulse {
+    0% { 
+        box-shadow: 0 0 0 0 var(--accent-glow-md); 
+        transform: scale(1); 
+    }
+    100% { 
+        box-shadow: 0 0 30px 10px var(--accent-glow-lg); 
+        transform: scale(0.97); 
+    }
+}
+
+/* Crisp SVG spinner */
+.spinner-svg {
+    animation: spin 1s linear infinite;
+    width: 20px;
+    height: 20px;
+    margin-right: 4px;
+}
+
+/* ================================================================
    RESPONSIVE
    ================================================================ */
 @media (max-width: 820px) {

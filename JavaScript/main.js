@@ -22,19 +22,7 @@
 //   - export.js     : Excel report generation from simulation data
 // =====================================================================
 
-
-// ── Imports ───────────────────────────────────────────────────────────
-// Scheduling algorithm functions — each accepts a process list (and
-// optional quantum) and returns { gantt, processes, totalTime }.
-import { 
-    runFCFS, 
-    runSJF_NP, 
-    runSRT, 
-    runRR, 
-    runPriority_NP, 
-    runPriority_P, 
-    runPriority_RR 
-} from './algorithms.js';
+const simWorker = new Worker('./JavaScript/worker.js', { type: 'module' });
 
 // UI utility functions and helpers used throughout the application.
 //   showToast          — displays brief notification messages to the user
@@ -266,80 +254,84 @@ document.addEventListener("DOMContentLoaded", () => {
     //   3. Dispatch to the correct algorithm function in algorithms.js.
     //   4. Render the result in either Instant Mode or Playback Mode.
     simulateBtn.addEventListener("click", () => {
-
-        // Read current process rows from the input table
         const processes = readProcessesFromTable();
-
-        // Abort if any validation errors are found (e.g., missing fields)
         if (!validateProcesses(processes)) return;
 
-        const algo    = algorithmSelect.value;
+        const algo = algorithmSelect.value;
         const quantum = parseInt(quantumInput.value);
 
-        // Extra guard: Round Robin algorithms require a valid time quantum
         if ((algo === "RR" || algo === "PRIORITY_RR") && (isNaN(quantum) || quantum <= 0)) {
             showToast("Time Quantum must be > 0 for Round Robin.", "error");
             return;
         }
 
-        let result;
+        // Set UI to highly visible loading state
+        const originalText = simulateBtn.innerHTML;
         
-        // Dispatch the process list to the appropriate scheduling algorithm.
-        // Each case calls the corresponding function from algorithms.js and
-        // stores the returned { gantt, processes, totalTime } object.
-        switch (algo) {
-            case "FCFS":        result = runFCFS(processes);                  break;
-            case "SJF":         result = runSJF_NP(processes);                break;
-            case "SRT":         result = runSRT(processes);                   break;
-            case "RR":          result = runRR(processes, quantum);           break;
-            case "PRIORITY_RR": result = runPriority_RR(processes, quantum);  break;
-            case "PRIORITY_NP": result = runPriority_NP(processes);           break;
-            case "PRIORITY_P":  result = runPriority_P(processes);            break;
-            default:
-                showToast("Unknown algorithm selected.", "error");
-                return;
-        }
+        // Crisp SVG Spinner
+        const spinnerSVG = `<svg class="spinner-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>`;
+        
+        simulateBtn.innerHTML = `${spinnerSVG} Simulating...`;
+        simulateBtn.classList.add("is-loading"); // <--- Adds the pulsing glow
+        simulateBtn.disabled = true;
 
-        if (result) {
-            const algoName = algorithmSelect.options[algorithmSelect.selectedIndex].text;
-            store.setSimulationData(algoName, result); // Save to store
+        // Send the task to the worker
+        simWorker.postMessage({ 
+            action: "simulate", 
+            algo, 
+            quantum, 
+            processes 
+        });
 
-            const tag = document.getElementById("algo-tag");
-            if (tag) tag.textContent = algoName;
+        // Handle the single run result
+        simWorker.onmessage = function(e) {
+            if (e.data.action !== "simulate") return; // Ignore compare messages here
 
-            const out = document.getElementById("output-section");
-            out.style.display = "flex";
+            const result = e.data.result;
             
-            const resultsCard = document.getElementById("results-table").closest(".out-card");
-            const statsRow    = document.querySelector(".stats-row");
-            const exportSec   = document.querySelector(".export-section");
+            // Restore UI
+            simulateBtn.innerHTML = originalText;
+            simulateBtn.classList.remove("is-loading"); // <--- Stops the pulsing glow
+            simulateBtn.disabled = false;
 
-            if (playbackToggle.checked) {
-                // Prepare UI for playback
-                playbackControls.style.display = "flex";
-                systemState.style.display      = "block";
-                resultsCard.style.display      = "none";
-                statsRow.style.display         = "none";
-                exportSec.style.display        = "none";
+            if (result) {
+                const algoName = algorithmSelect.options[algorithmSelect.selectedIndex].text;
+                store.setSimulationData(algoName, result); 
+
+                const tag = document.getElementById("algo-tag");
+                if (tag) tag.textContent = algoName;
+
+                const out = document.getElementById("output-section");
+                out.style.display = "flex";
                 
-                // Dispatch to store (this automatically triggers the first render!)
-                store.startPlayback(result.gantt, result.processes, result.totalTime);
-            } else {
-                // Instant Mode
-                store.reset(); // Clear any lingering playback state
-                playbackControls.style.display = "none";
-                systemState.style.display      = "none";
-                resultsCard.style.display      = "block";
-                statsRow.style.display         = "grid";
-                exportSec.style.display        = "flex";
+                const resultsCard = document.getElementById("results-table").closest(".out-card");
+                const statsRow = document.querySelector(".stats-row");
+                const exportSec = document.querySelector(".export-section");
 
-                renderGanttChart(result.gantt, result.totalTime);
-                renderTable(result.processes);
+                if (playbackToggle.checked) {
+                    playbackControls.style.display = "flex";
+                    systemState.style.display = "block";
+                    resultsCard.style.display = "none";
+                    statsRow.style.display = "none";
+                    exportSec.style.display = "none";
+                    
+                    store.startPlayback(result.gantt, result.processes, result.totalTime);
+                } else {
+                    store.reset(); 
+                    playbackControls.style.display = "none";
+                    systemState.style.display = "none";
+                    resultsCard.style.display = "block";
+                    statsRow.style.display = "grid";
+                    exportSec.style.display = "flex";
+
+                    renderGanttChart(result.gantt, result.totalTime);
+                    renderTable(result.processes);
+                }
+                
+                showToast("Simulation generated!", "success");
+                out.scrollIntoView({ behavior: "smooth", block: "start" });
             }
-            
-            showToast("Simulation generated!", "success");
-            out.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        };
     });
 
     // ── Step Button ───────────────────────────────────────────────────
@@ -359,59 +351,76 @@ document.addEventListener("DOMContentLoaded", () => {
     // to prevent one algorithm's mutations from affecting another's run.
     // The row with the best (lowest) values is visually highlighted.
     compareBtn.addEventListener("click", () => {
-        const baseProcesses = readProcessesFromTable();
-        const quantum = parseInt(quantumInput.value) || 2; // Default quantum of 2 if unset
+        const processes = readProcessesFromTable();
+        const quantum = parseInt(quantumInput.value) || 2; 
 
-        if (!validateProcesses(baseProcesses)) return;
+        if (!validateProcesses(processes)) return;
 
-        // Run all algorithms on separate clones of the base process list
-        const results = [
-            { name: "FCFS",                                data: runFCFS(cloneProcesses(baseProcesses)) },
-            { name: "SJF (Non-Preemptive)",                data: runSJF_NP(cloneProcesses(baseProcesses)) },
-            { name: "SRT (Preemptive)",                    data: runSRT(cloneProcesses(baseProcesses)) },
-            { name: `Round Robin (Q=${quantum})`,          data: runRR(cloneProcesses(baseProcesses), quantum) },
-            { name: "Priority (Non-Preemptive)",           data: runPriority_NP(cloneProcesses(baseProcesses)) },
-            { name: "Priority (Preemptive)",               data: runPriority_P(cloneProcesses(baseProcesses)) },
-            { name: `Priority Round Robin (Q=${quantum})`, data: runPriority_RR(cloneProcesses(baseProcesses), quantum) }
-        ];
+        // Set UI to loading state
+        const originalText = compareBtn.innerHTML;
+        
+        // Crisp SVG Spinner
+        const spinnerSVG = `<svg class="spinner-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>`;
+        
+        compareBtn.innerHTML = `${spinnerSVG} Running...`;
+        compareBtn.classList.add("is-loading"); // <--- Adds the pulsing glow
+        compareBtn.disabled = true;
 
-        // Compute average Waiting Time and average Turnaround Time for each algorithm
-        const computed = results.map(res => {
-            let tWt = 0, tTat = 0;
-            const n = res.data.processes.length;
-            res.data.processes.forEach(p => { tWt += p.wt; tTat += p.tat; });
-            return { name: res.name, avgWt: tWt / n, avgTat: tTat / n };
+        // Send the task to the worker
+        simWorker.postMessage({ 
+            action: "compare", 
+            quantum, 
+            processes 
         });
 
-        // Find the best (minimum) average values across all algorithms for highlighting
-        const bestWt  = Math.min(...computed.map(r => r.avgWt));
-        const bestTat = Math.min(...computed.map(r => r.avgTat));
+        // Handle the comparison result
+        const compareHandler = function(e) {
+            if (e.data.action !== "compare") return;
+            
+            // Restore UI
+            compareBtn.innerHTML = originalText;
+            compareBtn.classList.remove("is-loading"); // <--- Removes the glow
+            compareBtn.disabled = false;
 
-        // Build the comparison table rows dynamically
-        const tbody = document.getElementById("comparison-body");
-        tbody.innerHTML = ""; // Clear any previous comparison results
+            const results = e.data.results;
 
-        computed.forEach(res => {
-            const tr = document.createElement("tr");
+            // Compute averages
+            const computed = results.map(res => {
+                let tWt = 0, tTat = 0;
+                const n = res.data.processes.length;
+                res.data.processes.forEach(p => { tWt += p.wt; tTat += p.tat; });
+                return { name: res.name, avgWt: tWt / n, avgTat: tTat / n };
+            });
 
-            // Apply CSS class to cells that hold the best (lowest) metric value
-            const wtC  = res.avgWt  === bestWt  ? "best-val" : "";
-            const tatC = res.avgTat === bestTat ? "best-val" : "";
+            const bestWt = Math.min(...computed.map(r => r.avgWt));
+            const bestTat = Math.min(...computed.map(r => r.avgTat));
 
-            // Highlight the entire row if it has the best values for both metrics
-            if (wtC && tatC) tr.classList.add("best-row");
+            const tbody = document.getElementById("comparison-body");
+            tbody.innerHTML = ""; 
 
-            tr.innerHTML = `
-                <td><strong>${res.name}</strong></td>
-                <td class="${wtC}">${res.avgWt.toFixed(2)}</td>
-                <td class="${tatC}">${res.avgTat.toFixed(2)}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+            computed.forEach(res => {
+                const tr = document.createElement("tr");
+                const wtC = res.avgWt === bestWt ? "best-val" : "";
+                const tatC = res.avgTat === bestTat ? "best-val" : "";
 
-        // Display the comparison modal overlay
-        const modal = document.getElementById("comparison-modal");
-        modal.classList.add("active");
+                if (wtC && tatC) tr.classList.add("best-row");
+
+                tr.innerHTML = `
+                    <td><strong>${res.name}</strong></td>
+                    <td class="${wtC}">${res.avgWt.toFixed(2)}</td>
+                    <td class="${tatC}">${res.avgTat.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const modal = document.getElementById("comparison-modal");
+            modal.classList.add("active");
+            
+            // Clean up this specific listener so it doesn't fire on single simulations
+            simWorker.removeEventListener("message", compareHandler);
+        };
+        
+        simWorker.addEventListener("message", compareHandler);
     });
 
 
