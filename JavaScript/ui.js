@@ -569,6 +569,10 @@ export function renderTable(processes) {
                     <strong style="font-family:var(--f-mono); font-size:0.8rem;">${p.id}</strong>
                 </div>
             </td>
+            <td>${p.at}</td>
+            <td>${p.bt}</td>
+            <td>${p.ct}</td>
+            <td>${p.respTime}</td>
             <td>${p.wt}</td>
             <td>${p.tat}</td>
         `;
@@ -580,7 +584,6 @@ export function renderTable(processes) {
     animateStat("avg-wt",  (tWt  / n).toFixed(2));
     animateStat("avg-tat", (tTat / n).toFixed(2));
 }
-
 
 // ─────────────────────────────────────────────────────────────────────
 // renderPlaybackStep(gantt, processes, t, totalTime)
