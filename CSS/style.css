@@ -683,6 +683,35 @@ td input[type="number"]:focus {
     letter-spacing: 0.04em;
 }
 
+/* ── Stale Warning Banner ── */
+.stale-warning {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-radius: var(--r-md);
+    background: rgba(245, 158, 11, 0.12); /* Soft amber */
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    color: #fcd34d;
+    font-family: var(--f-body);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: -4px; /* Pulls the Gantt card up slightly */
+    animation: fadeUp 0.4s var(--out) both;
+}
+.stale-warning svg {
+    color: #f59e0b;
+}
+
+/* Light theme override for the warning */
+[data-theme="light"] .stale-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+}
+[data-theme="light"] .stale-warning svg {
+    color: #d97706;
+}
+
 /* ── Gantt ── */
 .gantt-card { /* extends out-card */ }
 

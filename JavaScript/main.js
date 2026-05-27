@@ -153,6 +153,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const stepBtn          = document.getElementById("step-btn");
     const autoPlayBtn      = document.getElementById("auto-play-btn");
 
+    // ── Stale Data Warning Helper ──
+    const staleWarning = document.getElementById("stale-warning");
+    const markStale = () => {
+        // Only show the warning if there is actively displayed simulation data
+        if (store.state.simulationData || store.state.playback.active) {
+            staleWarning.style.display = "flex";
+        }
+    };
+
+    // Listen for ANY edits inside the table (typing or clicking delete)
+    document.getElementById("process-body").addEventListener("input", markStale);
+    document.getElementById("process-body").addEventListener("click", (e) => {
+        if (e.target.closest(".delete-btn")) markStale();
+    });
+    
+    // Listen for config panel changes
+    algorithmSelect.addEventListener("change", markStale);
+    quantumInput.addEventListener("input", markStale);
+    document.getElementById("quantum-container").addEventListener("click", markStale);
+
     // ── Playback State Object ─────────────────────────────────────────
     // Tracks all state needed to drive the step-by-step playback feature.
     //   active    — whether playback mode is currently engaged
@@ -226,6 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentRows = document.querySelectorAll("#process-body tr").length;
         addProcessRow();
         if (currentRows < 10) showToast("New process added.", "success");
+        markStale();
     });
 
     // ── Reset ─────────────────────────────────────────────────────────
@@ -237,6 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadDefaultProcesses();
         document.getElementById("output-section").style.display = "none";
         document.getElementById("comparison-section").style.display = "none";
+        if (staleWarning) staleWarning.style.display = "none";
         window.scrollTo({ top: 0, behavior: 'smooth' });
         showToast("Simulator reset to default.", "success");
     });
@@ -293,6 +315,8 @@ document.addEventListener("DOMContentLoaded", () => {
             simulateBtn.innerHTML = originalText;
             simulateBtn.classList.remove("is-loading"); // <--- Stops the pulsing glow
             simulateBtn.disabled = false;
+
+            if (staleWarning) staleWarning.style.display = "none";
 
             if (result) {
                 const algoName = algorithmSelect.options[algorithmSelect.selectedIndex].text;
