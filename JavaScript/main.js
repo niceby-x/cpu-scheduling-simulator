@@ -211,6 +211,122 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ── Worker Message Dispatcher ─────────────────────────────────────
+    // A single persistent listener for ALL messages from the worker.
+    // Context objects are set by each button's click handler just before
+    // postMessage() is called, so the dispatcher always has the closure
+    // variables (originalText, algoName, quantum) it needs.
+    // This replaces the previous pattern of assigning simWorker.onmessage
+    // inside simulateBtn's click (which could be silently overwritten) and
+    // adding/removing a separate addEventListener inside compareBtn's click
+    // (which could accumulate stale listeners on rapid clicks).
+    let simulateContext = null;
+    let compareContext  = null;
+
+    simWorker.addEventListener("message", (e) => {
+        if (e.data.action === "simulate" && simulateContext) {
+            handleSimulateResult(e.data.result, simulateContext);
+            simulateContext = null;
+        } else if (e.data.action === "compare" && compareContext) {
+            handleCompareResult(e.data.results, compareContext);
+            compareContext = null;
+        }
+    });
+
+    // ── handleSimulateResult ──────────────────────────────────────────
+    // Processes the result of a single simulation sent back from the worker.
+    // Restores the Run button, renders the output (Instant or Playback mode),
+    // and scrolls to the output section.
+    function handleSimulateResult(result, ctx) {
+        simulateBtn.innerHTML = ctx.originalText;
+        simulateBtn.classList.remove("is-loading");
+        simulateBtn.disabled = false;
+
+        if (staleWarning) staleWarning.style.display = "none";
+
+        if (result) {
+            store.setSimulationData(ctx.algoName, result);
+
+            const tag = document.getElementById("algo-tag");
+            if (tag) tag.textContent = ctx.algoName;
+
+            const out = document.getElementById("output-section");
+            out.style.display = "flex";
+
+            const resultsCard = document.getElementById("results-table").closest(".out-card");
+            const statsRow    = document.querySelector(".stats-row");
+            const exportSec   = document.querySelector(".export-section");
+
+            if (playbackToggle.checked) {
+                playbackControls.style.display = "flex";
+                systemState.style.display      = "block";
+                resultsCard.style.display      = "none";
+                statsRow.style.display         = "none";
+                exportSec.style.display        = "none";
+
+                store.startPlayback(result.gantt, result.processes, result.totalTime);
+            } else {
+                store.reset();
+                playbackControls.style.display = "none";
+                systemState.style.display      = "none";
+                resultsCard.style.display      = "block";
+                statsRow.style.display         = "grid";
+                exportSec.style.display        = "flex";
+
+                renderGanttChart(result.gantt, result.totalTime);
+                renderTable(result.processes);
+            }
+
+            showToast("Simulation generated!", "success");
+            out.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    }
+
+    // ── handleCompareResult ───────────────────────────────────────────
+    // Processes the results of a full algorithm comparison sent back from
+    // the worker. Restores the Compare button, builds the results table,
+    // and opens the comparison modal.
+    function handleCompareResult(results, ctx) {
+        compareBtn.innerHTML = ctx.originalText;
+        compareBtn.classList.remove("is-loading");
+        compareBtn.disabled = false;
+
+        const modalHeaderLabel = document.querySelector("#comparison-section .panel-label");
+        if (modalHeaderLabel) {
+            modalHeaderLabel.textContent = `Algorithm Comparison (Time Quantum = ${ctx.quantum})`;
+        }
+
+        const computed = results.map(res => {
+            let tWt = 0, tTat = 0;
+            const n = res.data.processes.length;
+            res.data.processes.forEach(p => { tWt += p.wt; tTat += p.tat; });
+            return { name: res.name, avgWt: tWt / n, avgTat: tTat / n };
+        });
+
+        const bestWt  = Math.min(...computed.map(r => r.avgWt));
+        const bestTat = Math.min(...computed.map(r => r.avgTat));
+
+        const tbody = document.getElementById("comparison-body");
+        tbody.innerHTML = "";
+
+        computed.forEach(res => {
+            const tr   = document.createElement("tr");
+            const wtC  = res.avgWt  === bestWt  ? "best-val" : "";
+            const tatC = res.avgTat === bestTat ? "best-val" : "";
+
+            if (wtC && tatC) tr.classList.add("best-row");
+
+            tr.innerHTML = `
+                <td><strong>${res.name}</strong></td>
+                <td class="${wtC}">${res.avgWt.toFixed(2)}</td>
+                <td class="${tatC}">${res.avgTat.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById("comparison-modal").classList.add("active");
+    }
+
     // ── Playback Toggle Label ─────────────────────────────────────────
     // Updates the Run button's label when the user switches between
     // Instant Mode and Playback Mode using the toggle switch.
@@ -297,6 +413,10 @@ document.addEventListener("DOMContentLoaded", () => {
         simulateBtn.classList.add("is-loading"); // <--- Adds the pulsing glow
         simulateBtn.disabled = true;
 
+        // Capture the context the handler will need when the worker responds.
+        // The persistent dispatcher (set up above) reads this when the result arrives.
+        simulateContext = { originalText, algoName: algorithmSelect.options[algorithmSelect.selectedIndex].text };
+
         // Send the task to the worker
         simWorker.postMessage({ 
             action: "simulate", 
@@ -304,58 +424,6 @@ document.addEventListener("DOMContentLoaded", () => {
             quantum, 
             processes 
         });
-
-        // Handle the single run result
-        simWorker.onmessage = function(e) {
-            if (e.data.action !== "simulate") return; // Ignore compare messages here
-
-            const result = e.data.result;
-            
-            // Restore UI
-            simulateBtn.innerHTML = originalText;
-            simulateBtn.classList.remove("is-loading"); // <--- Stops the pulsing glow
-            simulateBtn.disabled = false;
-
-            if (staleWarning) staleWarning.style.display = "none";
-
-            if (result) {
-                const algoName = algorithmSelect.options[algorithmSelect.selectedIndex].text;
-                store.setSimulationData(algoName, result); 
-
-                const tag = document.getElementById("algo-tag");
-                if (tag) tag.textContent = algoName;
-
-                const out = document.getElementById("output-section");
-                out.style.display = "flex";
-                
-                const resultsCard = document.getElementById("results-table").closest(".out-card");
-                const statsRow = document.querySelector(".stats-row");
-                const exportSec = document.querySelector(".export-section");
-
-                if (playbackToggle.checked) {
-                    playbackControls.style.display = "flex";
-                    systemState.style.display = "block";
-                    resultsCard.style.display = "none";
-                    statsRow.style.display = "none";
-                    exportSec.style.display = "none";
-                    
-                    store.startPlayback(result.gantt, result.processes, result.totalTime);
-                } else {
-                    store.reset(); 
-                    playbackControls.style.display = "none";
-                    systemState.style.display = "none";
-                    resultsCard.style.display = "block";
-                    statsRow.style.display = "grid";
-                    exportSec.style.display = "flex";
-
-                    renderGanttChart(result.gantt, result.totalTime);
-                    renderTable(result.processes);
-                }
-                
-                showToast("Simulation generated!", "success");
-                out.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-        };
     });
 
     // ── Step Button ───────────────────────────────────────────────────
@@ -411,67 +479,15 @@ document.addEventListener("DOMContentLoaded", () => {
         compareBtn.classList.add("is-loading"); // <--- Adds the pulsing glow
         compareBtn.disabled = true;
 
+        // Capture context the handler needs when the worker responds.
+        compareContext = { originalText, quantum };
+
         // Send the task to the worker
         simWorker.postMessage({ 
             action: "compare", 
             quantum, 
             processes 
         });
-
-        // Handle the comparison result
-        const compareHandler = function(e) {
-            if (e.data.action !== "compare") return;
-            
-            // Restore UI
-            compareBtn.innerHTML = originalText;
-            compareBtn.classList.remove("is-loading"); // <--- Removes the glow
-            compareBtn.disabled = false;
-
-            // Update the modal header to surface the Quantum 
-            const modalHeaderLabel = document.querySelector("#comparison-section .panel-label");
-            if (modalHeaderLabel) {
-                modalHeaderLabel.textContent = `Algorithm Comparison (Time Quantum = ${quantum})`;
-            }
-
-            const results = e.data.results;
-
-            // Compute averages
-            const computed = results.map(res => {
-                let tWt = 0, tTat = 0;
-                const n = res.data.processes.length;
-                res.data.processes.forEach(p => { tWt += p.wt; tTat += p.tat; });
-                return { name: res.name, avgWt: tWt / n, avgTat: tTat / n };
-            });
-
-            const bestWt = Math.min(...computed.map(r => r.avgWt));
-            const bestTat = Math.min(...computed.map(r => r.avgTat));
-
-            const tbody = document.getElementById("comparison-body");
-            tbody.innerHTML = ""; 
-
-            computed.forEach(res => {
-                const tr = document.createElement("tr");
-                const wtC = res.avgWt === bestWt ? "best-val" : "";
-                const tatC = res.avgTat === bestTat ? "best-val" : "";
-
-                if (wtC && tatC) tr.classList.add("best-row");
-
-                tr.innerHTML = `
-                    <td><strong>${res.name}</strong></td>
-                    <td class="${wtC}">${res.avgWt.toFixed(2)}</td>
-                    <td class="${tatC}">${res.avgTat.toFixed(2)}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            const modal = document.getElementById("comparison-modal");
-            modal.classList.add("active");
-            
-            // Clean up this specific listener so it doesn't fire on single simulations
-            simWorker.removeEventListener("message", compareHandler);
-        };
-        
-        simWorker.addEventListener("message", compareHandler);
     });
 
 
