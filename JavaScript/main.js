@@ -364,7 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
             store.stepPlayback();
         }
     });
-    
+
     // ── Comparison Logic ──────────────────────────────────────────────
     // Runs all seven scheduling algorithms on the same process input and
     // displays their average Waiting Time and Turnaround Time side by side.
@@ -402,6 +402,12 @@ document.addEventListener("DOMContentLoaded", () => {
             compareBtn.innerHTML = originalText;
             compareBtn.classList.remove("is-loading"); // <--- Removes the glow
             compareBtn.disabled = false;
+
+            // Update the modal header to surface the Quantum 
+            const modalHeaderLabel = document.querySelector("#comparison-section .panel-label");
+            if (modalHeaderLabel) {
+                modalHeaderLabel.textContent = `Algorithm Comparison (Time Quantum = ${quantum})`;
+            }
 
             const results = e.data.results;
 
