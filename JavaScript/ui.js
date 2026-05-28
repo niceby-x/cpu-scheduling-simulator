@@ -36,6 +36,19 @@ const colors = [
     "#06b6d4", "#84cc16"
 ];
 
+// ── Simulator-Wide Constants ──────────────────────────────────────────
+// Centralised magic numbers so every feature references the same source
+// of truth instead of scattering literal values across files.
+//   MAX_PROCESSES      — upper bound on how many rows the process table may hold.
+//                        Exported so main.js can guard the Add-Process button with
+//                        the same value without duplicating the literal.
+//   AUTOPLAY_INTERVAL_MS — shared tick duration (ms) used by both the step-by-step
+//                        auto-play timer in main.js and the stat counter animation
+//                        in animateStat(). Keeping them in sync here ensures the
+//                        Gantt chart and the summary numbers always finish together.
+export const MAX_PROCESSES       = 10;
+export const AUTOPLAY_INTERVAL_MS = 700;
+
 
 // ── Algorithm Descriptions ────────────────────────────────────────────
 // Maps each algorithm's dropdown key to a plain-language description
@@ -311,7 +324,7 @@ export function enforceStrictInput(inputElement, minValue, maxValue = 9999) {
 // addProcessRow(at, bt, priority)
 //
 // Appends a new editable row to the process input table with the given
-// default field values. Enforces a maximum of 10 processes — shows an
+// default field values. Enforces a maximum of MAX_PROCESSES rows — shows an
 // error toast and returns early if the limit is already reached.
 //
 // Parameters:
@@ -330,9 +343,9 @@ export function addProcessRow(at = 0, bt = 1, priority = 1) {
     const processBody = document.getElementById("process-body");
     const currentRows = document.querySelectorAll("#process-body tr").length;
     
-    // Enforce the 10-process maximum
-    if (currentRows >= 10) {
-        showToast("Maximum of 10 processes allowed.", "error");
+    // Enforce the process-count maximum
+    if (currentRows >= MAX_PROCESSES) {
+        showToast(`Maximum of ${MAX_PROCESSES} processes allowed.`, "error");
         return;
     }
 
@@ -405,8 +418,9 @@ export function loadDefaultProcesses() {
 //
 // Animates a numeric statistic element from its current displayed value
 // to a new target value using an ease-out cubic interpolation over
-// 700 milliseconds. Used to animate the Average WT and Average TAT
-// summary stats after a simulation completes.
+// 416 milliseconds. Used to animate the Average WT and Average TAT
+// summary stats after a simulation completes. Duration is driven by
+// AUTOPLAY_INTERVAL_MS so the counter always matches the playback speed.
 //
 // Parameters:
 //   - id          : The DOM element ID whose text content will be animated.
@@ -439,7 +453,7 @@ function animateStat(id, targetValue) {
 
     const start = parseFloat(el.textContent) || 0; // Current displayed value
     const end   = parseFloat(targetValue);
-    const dur   = 700; // Animation duration in milliseconds
+    const dur   = AUTOPLAY_INTERVAL_MS; // Matches the auto-play tick so animations finish together
     const t0    = performance.now();
 
     function step(now) {

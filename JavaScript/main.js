@@ -47,11 +47,20 @@ import {
     renderGanttChart, 
     renderTable,
     enforceStrictInput,
-    renderPlaybackStep
+    renderPlaybackStep,
+    MAX_PROCESSES,
+    AUTOPLAY_INTERVAL_MS
 } from './ui.js';
 
 // Excel export function — generates and downloads a formatted .xlsx report.
 import { generateExcelReport } from './export.js';
+
+
+// ── Module-Wide Constants ─────────────────────────────────────────────
+// AUTOPLAY_INTERVAL_MS and MAX_PROCESSES are imported from ui.js, which
+// is the single source of truth for both values. Keeping them there
+// ensures the auto-play timer and the stat counter animation always
+// share the same duration without any duplication.
 
 
 // ── UI State Management (Mini-Store) ──────────────────────────────────
@@ -104,7 +113,7 @@ const store = {
             // IMMUTABLE UPDATE: Safely update the interval ID
             this.state.playback = { 
                 ...pb, 
-                interval: setInterval(() => this.stepPlayback(), 700) 
+                interval: setInterval(() => this.stepPlayback(), AUTOPLAY_INTERVAL_MS) 
             };
             this.notify();
         }
@@ -361,11 +370,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ── Add Process ───────────────────────────────────────────────────
     // Appends a new blank row to the process input table.
-    // Shows a success toast if under the 10-process display limit.
+    // Shows a success toast if under the MAX_PROCESSES display limit.
     addProcessBtn.addEventListener("click", () => {
         const currentRows = document.querySelectorAll("#process-body tr").length;
         addProcessRow();
-        if (currentRows < 10) showToast("New process added.", "success");
+        if (currentRows < MAX_PROCESSES) showToast("New process added.", "success");
         markStale();
     });
 
@@ -436,8 +445,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ── Auto-Play Button ──────────────────────────────────────────────
     // Toggles automatic playback. When active, stepPlayback() is called
-    // every 700ms via setInterval. Clicking again pauses the animation
-    // by clearing the interval. Does nothing if playback is already done.
+    // every AUTOPLAY_INTERVAL_MS via setInterval. Clicking again pauses
+    // the animation by clearing the interval. Does nothing if playback
+    // is already done.
     autoPlayBtn.addEventListener("click", () => store.toggleAutoPlay());
 
     // ── Keyboard Shortcuts (Playback Mode) ────────────────────────────
