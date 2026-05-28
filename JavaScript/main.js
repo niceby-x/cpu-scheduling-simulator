@@ -248,6 +248,21 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (e.data.action === "compare" && compareContext) {
             handleCompareResult(e.data.results, compareContext);
             compareContext = null;
+        } else if (e.data.action === "error") {
+            // Restore whichever button was spinning so the UI doesn't lock up
+            if (simulateContext) {
+                simulateBtn.innerHTML = simulateContext.originalText;
+                simulateBtn.classList.remove("is-loading");
+                simulateBtn.disabled = false;
+                simulateContext = null;
+            }
+            if (compareContext) {
+                compareBtn.innerHTML = compareContext.originalText;
+                compareBtn.classList.remove("is-loading");
+                compareBtn.disabled = false;
+                compareContext = null;
+            }
+            showToast(`Simulation error: ${e.data.message}`, "error");
         }
     });
 
@@ -285,6 +300,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 store.startPlayback(result.gantt, result.processes, result.totalTime);
             } else {
                 store.reset();
+                // Re-set simulationData after reset() clears it.
+                // markStale() checks store.state.simulationData to decide
+                // whether to show the stale warning; without this line,
+                // simulationData is always null in instant mode and the
+                // warning never appears when the user edits inputs.
+                store.setSimulationData(ctx.algoName, result);
                 playbackControls.style.display = "none";
                 systemState.style.display      = "none";
                 resultsCard.style.display      = "block";
