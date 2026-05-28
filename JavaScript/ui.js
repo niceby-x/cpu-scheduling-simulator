@@ -414,10 +414,28 @@ export function loadDefaultProcesses() {
 //
 // Easing: Uses a cubic ease-out curve (1 - (1-p)^3) so the counter
 // decelerates smoothly as it approaches the final value.
+//
+// Cancellation: A module-level Map stores the active rAF ID for each
+// element. If animateStat is called again before the previous animation
+// finishes (e.g. the user clicks Run multiple times quickly), the old
+// loop is cancelled via cancelAnimationFrame before a new one starts.
+// Without this, multiple rAF loops running on the same element cause
+// the counter to flicker or land on the wrong final value.
 // ─────────────────────────────────────────────────────────────────────
+
+// Registry: maps element ID → active requestAnimationFrame ID.
+// Stored outside animateStat so it persists across calls.
+const _statRafIds = new Map();
+
 function animateStat(id, targetValue) {
     const el = document.getElementById(id);
     if (!el) return;
+
+    // Cancel any in-progress animation on this element before starting a new one
+    if (_statRafIds.has(id)) {
+        cancelAnimationFrame(_statRafIds.get(id));
+        _statRafIds.delete(id);
+    }
 
     const start = parseFloat(el.textContent) || 0; // Current displayed value
     const end   = parseFloat(targetValue);
@@ -428,10 +446,17 @@ function animateStat(id, targetValue) {
         const p    = Math.min((now - t0) / dur, 1);      // Normalized progress [0, 1]
         const ease = 1 - Math.pow(1 - p, 3);             // Cubic ease-out
         el.textContent = (start + (end - start) * ease).toFixed(2);
-        if (p < 1) requestAnimationFrame(step);           // Continue until done
+
+        if (p < 1) {
+            // Store the new rAF ID so it can be cancelled if needed
+            _statRafIds.set(id, requestAnimationFrame(step));
+        } else {
+            // Animation complete — clean up the registry entry
+            _statRafIds.delete(id);
+        }
     }
 
-    requestAnimationFrame(step);
+    _statRafIds.set(id, requestAnimationFrame(step));
 }
 
 
