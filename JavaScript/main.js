@@ -120,16 +120,6 @@ const store = {
         }
     },
 
-    markFinished() {
-        const pb = this.state.playback;
-        if (!pb.finishedNotified) {
-            // IMMUTABLE UPDATE: Set the flag without mutating the existing object
-            this.state.playback = { ...pb, finishedNotified: true };
-            // No notify() here — this is a guard flag only, not a visual state
-            // change, so triggering subscribers again would cause a render loop.
-        }
-    },
-
     reset() {
         this.stopAutoPlay();
         this.state.simulationData = null;
@@ -213,13 +203,10 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelector(".export-section").style.display = "flex";
             renderTable(pb.processes);
             
-            // Prevent the success toast from spamming if state triggers again.
-            // IMMUTABLE UPDATE: delegate to the store method instead of mutating
-            // pb directly — pb is a reference to the current state object and
-            // writing to it bypasses the store's immutable update pattern entirely.
+            // Prevent the success toast from spamming if state triggers again
             if (!pb.finishedNotified) {
                 showToast("Playback finished!", "success");
-                store.markFinished();
+                pb.finishedNotified = true; 
             }
         }
     });
@@ -243,6 +230,11 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (e.data.action === "compare" && compareContext) {
             handleCompareResult(e.data.results, compareContext);
             compareContext = null;
+        } else if (e.data.action === "error") {
+            handleWorkerError(e.data.source, e.data.message);
+            // Clear whichever context was active so stale state doesn't linger
+            simulateContext = null;
+            compareContext  = null;
         }
     });
 
@@ -338,6 +330,26 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         document.getElementById("comparison-modal").classList.add("active");
+    }
+
+    // ── handleWorkerError ─────────────────────────────────────────────
+    // Called when the worker posts { action: "error", source, message }.
+    // Restores whichever button was active and shows an error toast so the
+    // UI never stays frozen with a stuck spinner after a worker failure.
+    function handleWorkerError(source, message) {
+        if (source === "simulate") {
+            simulateBtn.innerHTML = playbackToggle.checked
+                ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Start Playback`
+                : `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Run`;
+            simulateBtn.classList.remove("is-loading");
+            simulateBtn.disabled = false;
+        } else if (source === "compare") {
+            compareBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Compare All`;
+            compareBtn.classList.remove("is-loading");
+            compareBtn.disabled = false;
+        }
+        showToast(`Simulation error: ${message}`, "error");
+        console.error(`[Worker error] source=${source}:`, message);
     }
 
     // ── Playback Toggle Label ─────────────────────────────────────────
