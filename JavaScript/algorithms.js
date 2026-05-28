@@ -181,7 +181,14 @@ export function runSRT(processes) {
     // 'prev' tracks the ID of the last process (or 'Idle') that ran.
     // Used to decide whether to extend the last Gantt block or create a new one.
     let prev = null;
-    
+
+    // EVENT-DRIVEN: instead of stepping one tick at a time (O(n × T)), each
+    // iteration jumps directly to the next meaningful time point — whichever
+    // of these comes first:
+    //   1. The running process finishes (time + cur.remTime).
+    //   2. A future process arrives and may preempt (next unstarted arrival).
+    // This keeps the loop count proportional to the number of scheduling
+    // events (arrivals + completions), not the total burst time.
     while (completed !== n) {
         // Collect all processes that have arrived and still have work remaining.
         let avail = processes.filter(p => p.at <= time && p.remTime > 0);
@@ -194,27 +201,35 @@ export function runSRT(processes) {
 
             // Record the first time this process receives the CPU.
             if (cur.firstStart === -1) cur.firstStart = time;
-            
-            // Execute exactly ONE clock tick.
-            // If the process is the same as the previous tick, extend the last block.
-            // Otherwise, open a new Gantt block for this process.
+
+            // Find the next future arrival that could preempt the current process.
+            // Only arrivals of processes with less remaining time than cur qualify.
+            let futureArrivals = processes.filter(p => p.at > time && p.remTime > 0);
+            let nextPreemption = futureArrivals
+                .filter(p => p.remTime < cur.remTime + (p.at - time)) // could preempt
+                .reduce((min, p) => Math.min(min, p.at), Infinity);
+
+            // Jump to whichever comes first: completion or a potential preemption.
+            let runUntil = Math.min(time + cur.remTime, nextPreemption);
+            let slice    = runUntil - time;
+
+            // Extend the current Gantt block or open a new one.
             if (prev !== cur.id) {
-                gantt.push({ id: cur.id, start: time, end: time + 1, color: cur.color });
+                gantt.push({ id: cur.id, start: time, end: runUntil, color: cur.color });
             } else {
-                gantt[gantt.length - 1].end = time + 1;
+                gantt[gantt.length - 1].end = runUntil;
             }
-            
-            // Decrement remaining time, advance clock, update 'prev' tracker.
-            cur.remTime--;
-            time++;
-            prev = cur.id;
-            
+
+            cur.remTime -= slice;
+            time         = runUntil;
+            prev         = cur.id;
+
             // If this process has no remaining time, it is complete.
             if (cur.remTime === 0) {
                 completed++;
-                cur.ct = time;
-                cur.tat = cur.ct - cur.at;
-                cur.wt = cur.tat - cur.bt;
+                cur.ct      = time;
+                cur.tat     = cur.ct - cur.at;
+                cur.wt      = cur.tat - cur.bt;
                 cur.respTime = cur.firstStart - cur.at;
             }
         } else {
@@ -438,6 +453,12 @@ export function runPriority_P(processes) {
     // 'prev' tracks the last process ID executed, for Gantt block merging.
     let prev = null;
 
+    // EVENT-DRIVEN: instead of stepping one tick at a time (O(n × T)), each
+    // iteration jumps directly to the next meaningful time point — whichever
+    // of these comes first:
+    //   1. The running process finishes (time + cur.remTime).
+    //   2. A higher-priority process arrives and would preempt the current one.
+    // This keeps the loop count proportional to scheduling events, not burst time.
     while (completed !== n) {
         // Collect all arrived processes that still have remaining burst time.
         let avail = processes.filter(p => p.at <= time && p.remTime > 0);
@@ -450,27 +471,36 @@ export function runPriority_P(processes) {
 
             // Record first CPU access for response time calculation.
             if (cur.firstStart === -1) cur.firstStart = time;
-            
-            // Execute exactly ONE clock tick.
-            // Extend the current Gantt block if the same process ran last tick;
-            // otherwise open a new block (indicating a context switch occurred).
+
+            // Find the earliest future arrival of a process with strictly higher
+            // priority (lower value) than the current process — that is the point
+            // at which a preemption would occur.
+            let nextPreemption = processes
+                .filter(p => p.at > time && p.remTime > 0 && p.priority < cur.priority)
+                .reduce((min, p) => Math.min(min, p.at), Infinity);
+
+            // Jump to whichever comes first: completion or a preempting arrival.
+            let runUntil = Math.min(time + cur.remTime, nextPreemption);
+            let slice    = runUntil - time;
+
+            // Extend the current Gantt block or open a new one.
             if (prev !== cur.id) {
-                gantt.push({ id: cur.id, start: time, end: time + 1, color: cur.color });
+                gantt.push({ id: cur.id, start: time, end: runUntil, color: cur.color });
             } else {
-                gantt[gantt.length - 1].end = time + 1;
+                gantt[gantt.length - 1].end = runUntil;
             }
-            
+
             // Advance the clock and decrement the process's remaining time.
-            cur.remTime--;
-            time++;
-            prev = cur.id;
+            cur.remTime -= slice;
+            time         = runUntil;
+            prev         = cur.id;
 
             // If the process is now complete, record its metrics.
             if (cur.remTime === 0) {
                 completed++;
-                cur.ct = time;
-                cur.tat = cur.ct - cur.at;
-                cur.wt = cur.tat - cur.bt;
+                cur.ct      = time;
+                cur.tat     = cur.ct - cur.at;
+                cur.wt      = cur.tat - cur.bt;
                 cur.respTime = cur.firstStart - cur.at;
             }
         } else {
