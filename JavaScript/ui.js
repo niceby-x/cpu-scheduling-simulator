@@ -20,11 +20,13 @@
 //
 // Exports:
 //   showToast, algoDescriptions, readProcessesFromTable, validateProcesses,
-//   cloneProcesses, addProcessRow, loadDefaultProcesses, renderGanttChart,
-//   renderTable, enforceStrictInput, renderPlaybackStep, updateProcessIDs,
-//   updateCountBadge
+//   cloneProcesses (re-exported from utils.js), addProcessRow, loadDefaultProcesses,
+//   renderGanttChart, renderTable, enforceStrictInput, renderPlaybackStep,
+//   updateProcessIDs, updateCountBadge
 // =====================================================================
 
+
+import { cloneProcesses } from './utils.js';
 
 // ── Process Color Palette ─────────────────────────────────────────────
 // A fixed set of ten distinct colors cycled across processes in order.
@@ -243,17 +245,12 @@ export function readProcessesFromTable() {
 
 
 // ─────────────────────────────────────────────────────────────────────
-// cloneProcesses(processes)
-//
-// Returns a shallow copy of each process object in the array using the
-// spread operator. Used by the comparison feature in main.js to give
-// each algorithm its own independent copy of the process list, preventing
-// one algorithm's mutations (e.g., remTime changes) from corrupting
-// the input data for the algorithms that run after it.
+// cloneProcesses — imported from utils.js and re-exported so that
+// main.js can keep its single import point (ui.js) unchanged.
+// The implementation lives in utils.js because worker.js also needs
+// it and cannot import from ui.js (different execution context).
 // ─────────────────────────────────────────────────────────────────────
-export function cloneProcesses(processes) { 
-    return processes.map(p => ({ ...p })); 
-}
+export { cloneProcesses };
 
 
 // ─────────────────────────────────────────────────────────────────────

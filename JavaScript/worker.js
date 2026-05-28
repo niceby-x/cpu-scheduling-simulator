@@ -2,11 +2,7 @@ import {
     runFCFS, runSJF_NP, runSRT, runRR, 
     runPriority_NP, runPriority_P, runPriority_RR 
 } from './algorithms.js';
-
-// Helper to deep-clone processes (needed for the compare function)
-function cloneProcesses(processes) { 
-    return processes.map(p => ({ ...p })); 
-}
+import { cloneProcesses } from './utils.js';
 
 self.onmessage = function(e) {
     const { action, algo, quantum, processes } = e.data;
