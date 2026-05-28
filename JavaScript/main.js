@@ -120,6 +120,16 @@ const store = {
         }
     },
 
+    markFinished() {
+        const pb = this.state.playback;
+        if (!pb.finishedNotified) {
+            // IMMUTABLE UPDATE: Set the flag without mutating the existing object
+            this.state.playback = { ...pb, finishedNotified: true };
+            // No notify() here — this is a guard flag only, not a visual state
+            // change, so triggering subscribers again would cause a render loop.
+        }
+    },
+
     reset() {
         this.stopAutoPlay();
         this.state.simulationData = null;
@@ -203,10 +213,13 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelector(".export-section").style.display = "flex";
             renderTable(pb.processes);
             
-            // Prevent the success toast from spamming if state triggers again
+            // Prevent the success toast from spamming if state triggers again.
+            // IMMUTABLE UPDATE: delegate to the store method instead of mutating
+            // pb directly — pb is a reference to the current state object and
+            // writing to it bypasses the store's immutable update pattern entirely.
             if (!pb.finishedNotified) {
                 showToast("Playback finished!", "success");
-                pb.finishedNotified = true; 
+                store.markFinished();
             }
         }
     });
