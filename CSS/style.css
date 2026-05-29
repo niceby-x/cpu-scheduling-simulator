@@ -543,9 +543,7 @@ h1 em {
     -webkit-overflow-scrolling: touch;
     border-radius: var(--r-lg);
     border: 1px solid var(--glass-border);
-    overflow: hidden;
 }
-
 table { width: 100%; border-collapse: collapse; min-width: 420px; }
 
 thead { background: rgba(255,255,255,0.03); }
@@ -981,6 +979,130 @@ td input[type="number"]:focus {
     border-bottom-color: transparent; 
 }
 
+/* ── Comparison modal header — inline title + badge ─────────────────── */
+.comparison-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ── Wins badge — X/3 pill on highlighted rows ───────────────────────── */
+.wins-badge {
+    display: inline-block;
+    font-family: var(--f-mono);
+    font-size: 0.60rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 100px;
+    margin-left: 8px;
+    vertical-align: middle;
+    letter-spacing: 0.04em;
+}
+
+.wins-badge--1 { background: rgba(6,  182, 212, 0.15); color: #06b6d4; }
+.wins-badge--2 { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.wins-badge--3 { background: rgba(245,158,  11, 0.20); color: #f59e0b; }
+
+[data-theme="light"] .wins-badge--1 { color: #0891b2; }
+[data-theme="light"] .wins-badge--2 { color: #059669; }
+[data-theme="light"] .wins-badge--3 { color: #d97706; }
+
+/* ── Sortable column headers ─────────────────────────────────────────── */
+#comparison-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+}
+
+#comparison-table th.sortable:hover { color: var(--text-main); }
+
+.sort-icon {
+    opacity: 0; 
+    transition: opacity var(--t);
+}
+
+#comparison-table th.sortable:hover .sort-icon,
+#comparison-table th.sort-asc .sort-icon,
+#comparison-table th.sort-desc .sort-icon {
+    opacity: 0.5; /* Subtle appearance */
+}
+
+#comparison-table th.sort-asc  .sort-icon::before { content: '\2191'; }
+#comparison-table th.sort-desc .sort-icon::before { content: '\2193'; }
+#comparison-table th:not(.sort-asc):not(.sort-desc) .sort-icon::before { content: '\2195'; }
+
+/* ── Summary line ────────────────────────────────────────────────────── */
+/* Wrap the summary text in a distinct footer box */
+.comparison-summary {
+    margin-top: 24px;
+    padding: 16px;
+    background: var(--input-bg);
+    border-radius: var(--r-md);
+    border: 1px solid var(--glass-border);
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.summary-champion {
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+.summary-winner {
+    color: #10b981;
+    font-weight: 600;
+}
+
+[data-theme="light"] .summary-champion { color: #d97706; }
+[data-theme="light"] .summary-winner   { color: #059669; }
+
+/* ── Comparison table legend ─────────────────────────────────────── */
+.comparison-legend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 20px 12px;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--f-mono);
+    font-size: 0.70rem;
+    color: var(--text-sub);
+    letter-spacing: 0.02em;
+    padding: 0 8px;
+}
+
+/* Change the legend swatches from tall bars to circular dots */
+.legend-swatch {
+    display: inline-block;
+    width: 10px;      /* Changed from 3px */
+    height: 10px;     /* Changed from 14px */
+    border-radius: 50%; /* Makes them perfect circles */
+    flex-shrink: 0;
+}
+
+.legend-swatch--green  { background: #10b981; }
+.legend-swatch--cyan   { background: #06b6d4; }
+.legend-swatch--amber  { background: #f59e0b; }
+
+/* Align first swatch with the Algorithm column text (both at 20px) */
+.legend-item:first-child { padding-left: 0; }
+
+.legend-divider {
+    width: 1px;
+    height: 12px;
+    background: var(--glass-border);
+    flex-shrink: 0;
+}
+
+[data-theme="light"] .legend-swatch--green  { background: #059669; }
+[data-theme="light"] .legend-swatch--cyan   { background: #0891b2; }
+[data-theme="light"] .legend-swatch--amber  { background: #d97706; }
+
 /* ── Comparison Table Fixes & Enhancements ── */
 td.best-val {
     color: #10b981; 
@@ -994,24 +1116,106 @@ td.best-val::after {
     opacity: 0.8;
 }
 
-#comparison-body tr.best-row td { 
-    background: rgba(16, 185, 129, 0.08); 
-    border-bottom-color: transparent; 
-}
-
 #comparison-body tr td:first-child { 
     text-align: left; 
     padding-left: 20px; 
     border-left: 3px solid transparent; 
 }
 
-#comparison-body tr.best-row td:first-child { 
-    border-left-color: #10b981; 
+/* ── Best Waiting Time row — cyan ────────────────────────────────────
+   In practice, best-wt-row and best-tat-row always coexist on the same
+   row (Avg TAT = Avg WT + constant), so their combined selector below
+   takes over and renders green. These single-class rules are the correct
+   fallback if that invariant ever breaks.                              */
+#comparison-body tr.best-wt-row td {
+    background: rgba(6, 182, 212, 0.07);
+    border-bottom-color: transparent;
+}
+
+#comparison-body tr.best-wt-row td:first-child {
+    border-left-color: #06b6d4;
     border-top-left-radius: var(--r-md);
     border-bottom-left-radius: var(--r-md);
 }
 
-#comparison-body tr.best-row td:last-child {
+#comparison-body tr.best-wt-row td:last-child {
+    border-top-right-radius: var(--r-md);
+    border-bottom-right-radius: var(--r-md);
+}
+
+/* ── Best Turnaround Time row — amber ────────────────────────────── */
+#comparison-body tr.best-tat-row td {
+    background: rgba(245, 158, 11, 0.07);
+    border-bottom-color: transparent;
+}
+
+#comparison-body tr.best-tat-row td:first-child {
+    border-left-color: #f59e0b;
+    border-top-left-radius: var(--r-md);
+    border-bottom-left-radius: var(--r-md);
+}
+
+#comparison-body tr.best-tat-row td:last-child {
+    border-top-right-radius: var(--r-md);
+    border-bottom-right-radius: var(--r-md);
+}
+
+/* ── Best Waiting + Turnaround row — green ───────────────────────────
+   WT and TAT winners are always the same algorithm, so this combined
+   selector fires on every real run. Higher specificity (1,2,2) beats
+   both single-class rules above.                                      */
+#comparison-body tr.best-wt-row.best-tat-row td {
+    background: rgba(16, 185, 129, 0.08);
+    border-bottom-color: transparent;
+}
+
+#comparison-body tr.best-wt-row.best-tat-row td:first-child {
+    border-left-color: #10b981;
+    border-top-left-radius: var(--r-md);
+    border-bottom-left-radius: var(--r-md);
+}
+
+#comparison-body tr.best-wt-row.best-tat-row td:last-child {
+    border-top-right-radius: var(--r-md);
+    border-bottom-right-radius: var(--r-md);
+}
+
+/* ── Best Response Time row — cyan ──────────────────────────────────
+   Response Time can have a different winner than WT/TAT (preemptive
+   algorithms serve processes sooner), so this row may appear separately
+   from the green row above.                                           */
+#comparison-body tr.best-rt-row td {
+    background: rgba(6, 182, 212, 0.07);
+    border-bottom-color: transparent;
+}
+
+#comparison-body tr.best-rt-row td:first-child {
+    border-left-color: #06b6d4;
+    border-top-left-radius: var(--r-md);
+    border-bottom-left-radius: var(--r-md);
+}
+
+#comparison-body tr.best-rt-row td:last-child {
+    border-top-right-radius: var(--r-md);
+    border-bottom-right-radius: var(--r-md);
+}
+
+/* ── Overall champion: wins all three metrics — amber/gold ───────────
+   One algorithm completely dominated: best WT, best TAT, best RT.
+   Amber/gold makes this row unmistakably stand out from the green
+   WT+TAT row. Specificity (1,3,2) beats all rules above.             */
+#comparison-body tr.best-wt-row.best-tat-row.best-rt-row td {
+    background: rgba(245, 158, 11, 0.11);
+    border-bottom-color: transparent;
+}
+
+#comparison-body tr.best-wt-row.best-tat-row.best-rt-row td:first-child {
+    border-left-color: #f59e0b;
+    border-top-left-radius: var(--r-md);
+    border-bottom-left-radius: var(--r-md);
+}
+
+#comparison-body tr.best-wt-row.best-tat-row.best-rt-row td:last-child {
     border-top-right-radius: var(--r-md);
     border-bottom-right-radius: var(--r-md);
 }
@@ -1042,7 +1246,10 @@ td.best-val::after {
 
 .modal-content {
     width: 100%;
-    max-width: 650px;
+    max-width: 780px;
+    min-width: 0;      /* Allows the modal to shrink horizontally on small screens */
+    max-height: 90vh;  /* Prevents the modal from getting cut off vertically */
+    overflow-y: auto;  /* Adds a vertical scrollbar if the screen is very short */
     box-shadow: 0 24px 64px rgba(0,0,0,0.4);
     transform: translateY(30px) scale(0.98);
     transition: transform 0.4s var(--out);
@@ -1052,10 +1259,57 @@ td.best-val::after {
     transform: translateY(0) scale(1);
 }
 
+#comparison-section .panel-label {
+    font-family: var(--f-display); 
+    font-size: 1.1rem; /* Slightly smaller so the long text fits */
+    text-transform: none;          
+    color: var(--text);
+    margin: 0;
+    line-height: 1.3;
+}
+
 #comparison-section .out-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: flex-start; /* Anchors the close button to the top right */
+    gap: 16px;
+}
+
+/* Allow the badge to wrap safely if the text gets too long */
+#comparison-section .comparison-header-left {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap; 
+    gap: 8px 12px;
+    min-width: 0;
+    flex-shrink: 1;
+}
+
+/* Close button — boosted contrast so it's clearly visible against the
+   glass modal surface. Uses opaque bg + stronger border + full-strength
+   text color instead of the muted defaults from .btn.icon-btn.        */
+/* Make the close button a sleek circle */
+#close-modal-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none; /* Remove the heavy border */
+    background: rgba(255, 255, 255, 0.05); /* Very subtle background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#close-modal-btn:hover {
+    background: var(--accent-muted);
+    border-color: var(--accent-border-md);
+    color: var(--p-lavender);
+}
+
+[data-theme="light"] #close-modal-btn {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(0, 0, 0, 0.15);
+    color: var(--text);
 }
 
 /* ================================================================
@@ -1368,12 +1622,44 @@ input:checked + .slider:before {
     color: #059669; 
 }
 
-[data-theme="light"] #comparison-body tr.best-row td { 
+[data-theme="light"] #comparison-body tr.best-wt-row td { 
+    background: rgba(6, 182, 212, 0.06); 
+}
+
+[data-theme="light"] #comparison-body tr.best-wt-row td:first-child { 
+    border-left-color: #0891b2; 
+}
+
+[data-theme="light"] #comparison-body tr.best-tat-row td {
+    background: rgba(245, 158, 11, 0.06);
+}
+
+[data-theme="light"] #comparison-body tr.best-tat-row td:first-child {
+    border-left-color: #d97706;
+}
+
+[data-theme="light"] #comparison-body tr.best-wt-row.best-tat-row td { 
     background: rgba(5, 150, 105, 0.06); 
 }
 
-[data-theme="light"] #comparison-body tr.best-row td:first-child { 
+[data-theme="light"] #comparison-body tr.best-wt-row.best-tat-row td:first-child { 
     border-left-color: #059669; 
+}
+
+[data-theme="light"] #comparison-body tr.best-rt-row td {
+    background: rgba(6, 182, 212, 0.06);
+}
+
+[data-theme="light"] #comparison-body tr.best-rt-row td:first-child {
+    border-left-color: #0891b2;
+}
+
+[data-theme="light"] #comparison-body tr.best-wt-row.best-tat-row.best-rt-row td {
+    background: rgba(217, 119, 6, 0.08);
+}
+
+[data-theme="light"] #comparison-body tr.best-wt-row.best-tat-row.best-rt-row td:first-child {
+    border-left-color: #d97706;
 }
 
 [data-theme="light"] .toast {

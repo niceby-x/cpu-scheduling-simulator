@@ -67,6 +67,13 @@ import { generateExcelReport } from './export.js';
 //   Defined once here so a design change only needs editing in one place.
 const SPINNER_SVG = `<svg class="spinner-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>`;
 
+// ── Comparison State ──────────────────────────────────────────────────
+// Stored at module level so renderComparisonRows(), renderComparisonSummary(),
+// and attachSortListeners() can all read and mutate them without passing
+// arguments through every call.
+let _compareData = null; // { computed, bestWt, bestTat, bestResp }
+let _sortState   = { col: null, dir: 'asc' };
+
 
 // ── UI State Management (Mini-Store) ──────────────────────────────────
 // A lightweight reactive store that holds the application's state. 
@@ -321,6 +328,101 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // ── renderComparisonRows ──────────────────────────────────────────
+    // Reads _compareData and _sortState, then rebuilds the tbody from
+    // scratch. Called on first render and again on every column-header
+    // click so the sort is always applied to the latest data.
+    function renderComparisonRows() {
+        if (!_compareData) return;
+        const { computed, bestWt, bestTat, bestResp } = _compareData;
+
+        const rows = [...computed];
+        if (_sortState.col) {
+            rows.sort((a, b) => {
+                const va = a[_sortState.col], vb = b[_sortState.col];
+                return _sortState.dir === 'asc' ? va - vb : vb - va;
+            });
+        }
+
+        const tbody = document.getElementById("comparison-body");
+        tbody.innerHTML = "";
+
+        rows.forEach(res => {
+            const tr         = document.createElement("tr");
+            const isWtBest   = res.avgWt   === bestWt;
+            const isTatBest  = res.avgTat  === bestTat;
+            const isRespBest = res.avgResp === bestResp;
+            const wtC        = isWtBest   ? "best-val" : "";
+            const tatC       = isTatBest  ? "best-val" : "";
+            const respC      = isRespBest ? "best-val" : "";
+
+            // Count how many of the 3 metrics this algorithm wins and
+            // show a pill badge so the user doesn't need to count stars.
+            const wins = [isWtBest, isTatBest, isRespBest].filter(Boolean).length;
+            const winsBadge = wins > 0
+                ? `<span class="wins-badge wins-badge--${wins}">${wins}/3</span>`
+                : "";
+
+            if (isWtBest)   tr.classList.add("best-wt-row");
+            if (isTatBest)  tr.classList.add("best-tat-row");
+            if (isRespBest) tr.classList.add("best-rt-row");
+
+            tr.innerHTML = `
+                <td><strong>${res.name}</strong>${winsBadge}</td>
+                <td class="${wtC}">${res.avgWt.toFixed(2)}</td>
+                <td class="${tatC}">${res.avgTat.toFixed(2)}</td>
+                <td class="${respC}">${res.avgResp.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ── renderComparisonSummary ───────────────────────────────────────
+    // Generates one plain-English sentence below the table that names
+    // the winner(s) so the user doesn't have to read every cell.
+    function renderComparisonSummary() {
+        const el = document.getElementById("comparison-summary");
+        if (!el || !_compareData) return;
+
+        const { computed, bestWt, bestTat, bestResp } = _compareData;
+        const champion = computed.find(
+            r => r.avgWt === bestWt && r.avgTat === bestTat && r.avgResp === bestResp
+        );
+
+        if (champion) {
+            el.innerHTML = `<span class="summary-champion">${champion.name}</span> dominates — best in all 3 metrics.`;
+        } else {
+            const wtWinner = computed.find(r => r.avgWt   === bestWt);
+            const rtWinner = computed.find(r => r.avgResp === bestResp);
+            el.innerHTML =
+                `<span class="summary-winner">${wtWinner.name}</span> wins WT + TAT. ` +
+                `<span class="summary-winner">${rtWinner.name}</span> wins response time.`;
+        }
+    }
+
+    // ── attachSortListeners ───────────────────────────────────────────
+    // Wires click handlers onto every <th class="sortable"> in the
+    // comparison table. Toggles asc/desc on repeated clicks and updates
+    // the sort-icon class so CSS can swap the arrow glyph.
+    function attachSortListeners() {
+        document.querySelectorAll("#comparison-table thead th.sortable").forEach(th => {
+            th.addEventListener("click", () => {
+                const col = th.dataset.col;
+                if (_sortState.col === col) {
+                    _sortState.dir = _sortState.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    _sortState.col = col;
+                    _sortState.dir = 'asc';
+                }
+                document.querySelectorAll("#comparison-table thead th.sortable").forEach(t => {
+                    t.classList.remove("sort-asc", "sort-desc");
+                });
+                th.classList.add(_sortState.dir === 'asc' ? "sort-asc" : "sort-desc");
+                renderComparisonRows();
+            });
+        });
+    }
+
     // ── handleCompareResult ───────────────────────────────────────────
     // Processes the results of a full algorithm comparison sent back from
     // the worker. Restores the Compare button, builds the results table,
@@ -336,32 +438,29 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const computed = results.map(res => {
-            let tWt = 0, tTat = 0;
+            let tWt = 0, tTat = 0, tResp = 0;
             const n = res.data.processes.length;
-            res.data.processes.forEach(p => { tWt += p.wt; tTat += p.tat; });
-            return { name: res.name, avgWt: tWt / n, avgTat: tTat / n };
+            res.data.processes.forEach(p => { tWt += p.wt; tTat += p.tat; tResp += p.respTime; });
+            return { name: res.name, avgWt: tWt / n, avgTat: tTat / n, avgResp: tResp / n };
         });
 
-        const bestWt  = Math.min(...computed.map(r => r.avgWt));
-        const bestTat = Math.min(...computed.map(r => r.avgTat));
+        // Store results and reset sort so every new comparison starts unsorted.
+        _compareData = {
+            computed,
+            bestWt:   Math.min(...computed.map(r => r.avgWt)),
+            bestTat:  Math.min(...computed.map(r => r.avgTat)),
+            bestResp: Math.min(...computed.map(r => r.avgResp))
+        };
+        _sortState = { col: null, dir: 'asc' };
 
-        const tbody = document.getElementById("comparison-body");
-        tbody.innerHTML = "";
-
-        computed.forEach(res => {
-            const tr   = document.createElement("tr");
-            const wtC  = res.avgWt  === bestWt  ? "best-val" : "";
-            const tatC = res.avgTat === bestTat ? "best-val" : "";
-
-            if (wtC && tatC) tr.classList.add("best-row");
-
-            tr.innerHTML = `
-                <td><strong>${res.name}</strong></td>
-                <td class="${wtC}">${res.avgWt.toFixed(2)}</td>
-                <td class="${tatC}">${res.avgTat.toFixed(2)}</td>
-            `;
-            tbody.appendChild(tr);
+        // Clear any stale sort classes from a previous run.
+        document.querySelectorAll("#comparison-table thead th.sortable").forEach(t => {
+            t.classList.remove("sort-asc", "sort-desc");
         });
+
+        renderComparisonRows();
+        renderComparisonSummary();
+        attachSortListeners();
 
         document.getElementById("comparison-modal").classList.add("active");
     }

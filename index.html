@@ -254,23 +254,38 @@
         <div id="comparison-modal" class="modal-overlay" aria-hidden="true">
             <div id="comparison-section" class="glass out-card modal-content">
                 <div class="out-card-header">
-                    <div>
+                    <div class="comparison-header-left">
                         <p class="panel-label">Algorithm Comparison</p>
                         <span class="badge">Lower = Better ↓</span>
                     </div>
                     <button id="close-modal-btn" class="btn icon-btn" title="Close">✕</button>
                 </div>
                 <div class="table-responsive">
+                    <div class="comparison-legend">
+                        <span class="legend-item">
+                            <span class="legend-swatch legend-swatch--green"></span>Best WT + TAT
+                        </span>
+                        <span class="legend-divider"></span>
+                        <span class="legend-item">
+                            <span class="legend-swatch legend-swatch--cyan"></span>Best response time
+                        </span>
+                        <span class="legend-divider"></span>
+                        <span class="legend-item">
+                            <span class="legend-swatch legend-swatch--amber"></span>Overall champion
+                        </span>
+                    </div>
                     <table id="comparison-table">
                         <thead>
                             <tr>
                                 <th style="text-align:left; padding-left:20px;">Algorithm</th>
-                                <th>Avg Waiting</th>
-                                <th>Avg Turnaround</th>
+                                <th class="sortable" data-col="avgWt">Avg Waiting <span class="sort-icon">↕</span></th>
+                                <th class="sortable" data-col="avgTat">Avg Turnaround <span class="sort-icon">↕</span></th>
+                                <th class="sortable" data-col="avgResp">Avg Response <span class="sort-icon">↕</span></th>
                             </tr>
                         </thead>
                         <tbody id="comparison-body"></tbody>
                     </table>
+                    <div id="comparison-summary" class="comparison-summary"></div>
                 </div>
             </div>
         </div>
