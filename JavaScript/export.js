@@ -137,8 +137,14 @@ export async function generateExcelReport(simulationData) {
     sortedProcesses.forEach((p) => {
         dataSheet.getRow(currentRow).height = 20;
 
-        // Show priority value only if the algorithm is priority-based or priority > 0
-        const prio    = (algoName.includes("Priority") || p.priority > 0) ? p.priority : "-";
+        // Show priority value only if the algorithm actually uses priority.
+        // The previous condition also checked `p.priority > 0`, which fired for
+        // nearly every process with the default data (priorities 1–4), causing
+        // FCFS, SJF, SRT, and RR exports to display priority values those
+        // algorithms completely ignore. Checking the algorithm name alone is the
+        // correct gate — the three Priority variants all include "Priority" in
+        // their display name (see algoDescriptions in ui.js).
+        const prio    = algoName.includes("Priority") ? p.priority : "-";
         const rowData = [p.id, p.at, p.bt, prio, p.ct, p.wt, p.tat, p.respTime];
         
         rowData.forEach((val, i) => {
