@@ -511,7 +511,11 @@ document.addEventListener("DOMContentLoaded", () => {
         store.reset();
         loadDefaultProcesses();
         document.getElementById("output-section").style.display = "none";
-        document.getElementById("comparison-section").style.display = "none";
+        // FIX: The comparison modal is shown/hidden via the "active" class on
+        // #comparison-modal (the full overlay), not via display:none on the inner
+        // #comparison-section. Using display:none on the inner element hid the
+        // content but left the darkened backdrop overlay blocking the UI.
+        document.getElementById("comparison-modal").classList.remove("active");
         if (staleWarning) staleWarning.style.display = "none";
         window.scrollTo({ top: 0, behavior: 'smooth' });
         showToast("Simulator reset to default.", "success");
