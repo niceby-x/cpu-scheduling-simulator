@@ -404,11 +404,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (champion) {
             el.innerHTML = `<span class="summary-champion">${champion.name}</span> dominates — best in all 3 metrics.`;
         } else {
-            const wtWinner = computed.find(r => r.avgWt   === bestWt);
-            const rtWinner = computed.find(r => r.avgResp === bestResp);
+            // FIX: Use three separate winners — wtWinner only holds the best
+            // avg waiting time, not TAT. The old label "wins WT + TAT" was
+            // overstating it. tatWinner is now found independently.
+            const wtWinner  = computed.find(r => r.avgWt   === bestWt);
+            const tatWinner = computed.find(r => r.avgTat  === bestTat);
+            const rtWinner  = computed.find(r => r.avgResp === bestResp);
             el.innerHTML =
-                `<span class="summary-winner">${wtWinner.name}</span> wins WT + TAT. ` +
-                `<span class="summary-winner">${rtWinner.name}</span> wins response time.`;
+                `<span class="summary-winner">${wtWinner.name}</span> wins Avg Waiting Time. ` +
+                `<span class="summary-winner">${tatWinner.name}</span> wins Avg Turnaround Time. ` +
+                `<span class="summary-winner">${rtWinner.name}</span> wins Avg Response Time.`;
         }
     }
 
