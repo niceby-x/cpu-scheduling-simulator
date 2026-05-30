@@ -309,13 +309,19 @@
         });
 
         // ── Quantum stepper buttons ──
+        // Both buttons hard-code the same [1, 100] bounds used by enforceStrictInput
+        // in main.js. The stepper buttons set q.value directly, bypassing the
+        // 'change' event that enforceStrictInput listens on, so bounds must be
+        // enforced here as well. Silently stopping at the boundary (no toast) is
+        // intentional — the user is nudging a value one step at a time, not
+        // committing an out-of-range entry, so an alert would be disruptive.
         document.getElementById('q-dec').addEventListener('click', () => {
             const q = document.getElementById('quantum');
             if (parseInt(q.value) > 1) q.value = parseInt(q.value) - 1;
         });
         document.getElementById('q-inc').addEventListener('click', () => {
             const q = document.getElementById('quantum');
-            q.value = parseInt(q.value) + 1;
+            if (parseInt(q.value) < 100) q.value = parseInt(q.value) + 1;
         });
     </script>
 </body>
