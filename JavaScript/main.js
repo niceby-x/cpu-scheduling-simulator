@@ -285,6 +285,45 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ── Worker Fatal Error Handler ────────────────────────────────────
+    // Catches Worker-level failures that never reach the "message" channel:
+    // wrong file path, syntax error in worker.js, or a browser security
+    // policy blocking the Worker entirely. Without this, the spinner stays
+    // on forever and both buttons stay permanently disabled with no way for
+    // the user to recover.
+    //
+    // Placed inside DOMContentLoaded (not at module scope) so it shares the
+    // same closure as simulateContext, compareContext, simulateBtn, and
+    // compareBtn — the same variables the message dispatcher already uses.
+    // This keeps the recovery logic in one place and avoids duplicating
+    // button references at module scope.
+    //
+    // NOTE: This handler fires for Worker startup/runtime errors only.
+    // Errors thrown inside algorithm functions are caught by the worker's
+    // own try/catch and sent back as action:"error" messages, which the
+    // message dispatcher above already handles correctly.
+    simWorker.addEventListener("error", (e) => {
+        console.error("Worker fatal error:", e);
+
+        // Restore the Run button if it was spinning
+        if (simulateContext) {
+            simulateBtn.innerHTML = simulateContext.originalText;
+            simulateBtn.classList.remove("is-loading");
+            simulateBtn.disabled = false;
+            simulateContext = null;
+        }
+
+        // Restore the Compare button if it was spinning
+        if (compareContext) {
+            compareBtn.innerHTML = compareContext.originalText;
+            compareBtn.classList.remove("is-loading");
+            compareBtn.disabled = false;
+            compareContext = null;
+        }
+
+        showToast("A critical worker error occurred. Please refresh the page.", "error");
+    });
+
     // ── handleSimulateResult ──────────────────────────────────────────
     // Processes the result of a single simulation sent back from the worker.
     // Restores the Run button, renders the output (Instant or Playback mode),
