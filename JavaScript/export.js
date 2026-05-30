@@ -184,8 +184,9 @@ export async function generateExcelReport(simulationData) {
     // ── Averages Summary Row ──────────────────────────────────────────
     // Spans columns B–F with an "Averages" label, then places the
     // Average WT and Average TAT values in the final two columns.
-    // Values are read from the DOM to ensure the Excel exactly matches
-    // what is displayed in the UI's stat cards.
+    // Values are computed directly from result.processes — not read from
+    // the DOM. This makes the export self-contained and independent of
+    // whatever the UI's stat cards happen to be displaying at export time.
     dataSheet.getRow(currentRow).height = 25;
     dataSheet.mergeCells(`B${currentRow}:F${currentRow}`);
     
