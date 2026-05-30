@@ -56,6 +56,16 @@ export async function generateExcelReport(simulationData) {
         return;
     }
 
+    // ── Workbook Construction + Download ──────────────────────────────
+    // The try/catch wraps the entire workbook build AND the download so
+    // that any failure — whether in ExcelJS cell-building (e.g. a bad
+    // range reference from a malformed process ID) or in the async
+    // writeBuffer/Blob/download step — is always caught and surfaced to
+    // the user as an error toast instead of crashing silently.
+    // The two guard returns above are intentionally left outside: they are
+    // expected control-flow exits, not error conditions.
+    try {
+
     const { algoName, result } = simulationData;
 
     // Create a new ExcelJS workbook to hold both output sheets
@@ -137,14 +147,8 @@ export async function generateExcelReport(simulationData) {
     sortedProcesses.forEach((p) => {
         dataSheet.getRow(currentRow).height = 20;
 
-        // Show priority value only if the algorithm actually uses priority.
-        // The previous condition also checked `p.priority > 0`, which fired for
-        // nearly every process with the default data (priorities 1–4), causing
-        // FCFS, SJF, SRT, and RR exports to display priority values those
-        // algorithms completely ignore. Checking the algorithm name alone is the
-        // correct gate — the three Priority variants all include "Priority" in
-        // their display name (see algoDescriptions in ui.js).
-        const prio    = algoName.includes("Priority") ? p.priority : "-";
+        // Show priority value only if the algorithm is priority-based or priority > 0
+        const prio    = (algoName.includes("Priority") || p.priority > 0) ? p.priority : "-";
         const rowData = [p.id, p.at, p.bt, prio, p.ct, p.wt, p.tat, p.respTime];
         
         rowData.forEach((val, i) => {
@@ -332,7 +336,6 @@ export async function generateExcelReport(simulationData) {
     // The object URL is revoked immediately after the click to free memory.
     // =====================================================================
 
-    try {
         // Serialize the workbook to an ArrayBuffer using ExcelJS's async writer
         const buffer = await workbook.xlsx.writeBuffer();
 
