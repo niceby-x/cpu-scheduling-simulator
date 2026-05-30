@@ -7,8 +7,8 @@
 //
 // The generated workbook contains two worksheets:
 //   1. Simulation Data  — A formatted table of per-process metrics
-//                         (AT, BT, Priority, CT, WT, TAT) with average
-//                         summary rows for WT and TAT.
+//                         (AT, BT, Priority, CT, WT, TAT, RT) with average
+//                         summary rows for WT, TAT, and Response Time.
 //   2. Gantt Timeline   — A cell-by-cell visual recreation of the Gantt
 //                         chart where each column represents one time unit,
 //                         colored to match the process that ran during it.
@@ -114,7 +114,7 @@ export async function generateExcelReport(simulationData) {
     // Renders the column headers for the per-process metrics table with
     // a lavender background, centered alignment, and a medium bottom border.
     let currentRow = 8;
-    const headers  = ["Process", "Arrival Time", "Burst Time", "Priority", "Completion Time", "Waiting Time", "Turnaround Time"];
+    const headers  = ["Process", "Arrival Time", "Burst Time", "Priority", "Completion Time", "Waiting Time", "Turnaround Time", "Response Time"];
     
     dataSheet.getRow(currentRow).height = 25;
     headers.forEach((h, i) => {
@@ -139,7 +139,7 @@ export async function generateExcelReport(simulationData) {
 
         // Show priority value only if the algorithm is priority-based or priority > 0
         const prio    = (algoName.includes("Priority") || p.priority > 0) ? p.priority : "-";
-        const rowData = [p.id, p.at, p.bt, prio, p.ct, p.wt, p.tat];
+        const rowData = [p.id, p.at, p.bt, prio, p.ct, p.wt, p.tat, p.respTime];
         
         rowData.forEach((val, i) => {
             const cell     = dataSheet.getCell(currentRow, i + 2);
@@ -153,7 +153,8 @@ export async function generateExcelReport(simulationData) {
 
     // ── Conditional Formatting (Heatmaps) ─────────────────────────────
     // Applies a native Excel Green-Yellow-Red color scale to the Waiting 
-    // Time (Column G) and Turnaround Time (Column H) cells.
+    // Time (Column G), Turnaround Time (Column H), and Response Time
+    // (Column I) cells.
     const endDataRow = currentRow - 1; // The last row containing process data
     if (endDataRow >= 9) {
         const heatmapRule = {
@@ -179,14 +180,20 @@ export async function generateExcelReport(simulationData) {
             ref: `H9:H${endDataRow}`, // Turnaround Time column
             rules: [heatmapRule]
         });
+
+        dataSheet.addConditionalFormatting({
+            ref: `I9:I${endDataRow}`, // Response Time column
+            rules: [heatmapRule]
+        });
     }
 
     // ── Averages Summary Row ──────────────────────────────────────────
     // Spans columns B–F with an "Averages" label, then places the
-    // Average WT and Average TAT values in the final two columns.
-    // Values are computed directly from result.processes — not read from
-    // the DOM. This makes the export self-contained and independent of
-    // whatever the UI's stat cards happen to be displaying at export time.
+    // Average WT (col G), Average TAT (col H), and Average Response Time
+    // (col I) values in the final three columns. Values are computed
+    // directly from result.processes — not read from the DOM. This makes
+    // the export self-contained and independent of whatever the UI's stat
+    // cards happen to be displaying at export time.
     dataSheet.getRow(currentRow).height = 25;
     dataSheet.mergeCells(`B${currentRow}:F${currentRow}`);
     
@@ -198,12 +205,14 @@ export async function generateExcelReport(simulationData) {
 
     // Calculate averages directly from the simulation result data
     const totalProcesses = result.processes.length;
-    const totalWt = result.processes.reduce((sum, p) => sum + p.wt, 0);
-    const totalTat = result.processes.reduce((sum, p) => sum + p.tat, 0);
+    const totalWt   = result.processes.reduce((sum, p) => sum + p.wt,       0);
+    const totalTat  = result.processes.reduce((sum, p) => sum + p.tat,      0);
+    const totalResp = result.processes.reduce((sum, p) => sum + p.respTime, 0);
     
     // Default to 0 if there are no processes to avoid NaN, round to 2 decimals
-    const avgWt = totalProcesses > 0 ? Number((totalWt / totalProcesses).toFixed(2)) : 0;
-    const avgTat = totalProcesses > 0 ? Number((totalTat / totalProcesses).toFixed(2)) : 0;
+    const avgWt   = totalProcesses > 0 ? Number((totalWt   / totalProcesses).toFixed(2)) : 0;
+    const avgTat  = totalProcesses > 0 ? Number((totalTat  / totalProcesses).toFixed(2)) : 0;
+    const avgResp = totalProcesses > 0 ? Number((totalResp / totalProcesses).toFixed(2)) : 0;
 
     const avgWtCell  = dataSheet.getCell(currentRow, 7);
     avgWtCell.value  = avgWt;
@@ -211,8 +220,11 @@ export async function generateExcelReport(simulationData) {
     const avgTatCell = dataSheet.getCell(currentRow, 8);
     avgTatCell.value = avgTat;
 
-    // Apply mint fill and bold styling to both average value cells
-    [7, 8].forEach(col => {
+    const avgRespCell = dataSheet.getCell(currentRow, 9);
+    avgRespCell.value = avgResp;
+
+    // Apply mint fill and bold styling to all three average value cells
+    [7, 8, 9].forEach(col => {
         const cell     = dataSheet.getCell(currentRow, col);
         cell.font      = { name: 'Segoe UI', bold: true, color: { argb: palette.textMain } };
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -230,6 +242,7 @@ export async function generateExcelReport(simulationData) {
     dataSheet.getColumn(6).width = 16;  // F — Completion Time
     dataSheet.getColumn(7).width = 16;  // G — Waiting Time
     dataSheet.getColumn(8).width = 18;  // H — Turnaround Time
+    dataSheet.getColumn(9).width = 16;  // I — Response Time
 
 
     // =====================================================================
