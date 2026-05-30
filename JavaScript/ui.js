@@ -302,16 +302,19 @@ export function enforceStrictInput(inputElement, minValue, maxValue = 9999) {
         }
     });
     
-    // Clamp the committed value to [minValue, maxValue] on change
+    // Clamp the committed value to [minValue, maxValue] on change.
+    // FIX: Use "success" (blue) instead of "error" (red) for auto-correction
+    // toasts. A clamped value is a helpful correction, not a user error —
+    // showing a red toast was semantically misleading and unnecessarily alarming.
     inputElement.addEventListener('change', () => {
         let val = parseInt(inputElement.value);
         
         if (isNaN(val) || val < minValue) {
             inputElement.value = minValue;
-            showToast(`Value auto-corrected to minimum (${minValue}).`, "error");
+            showToast(`Value auto-corrected to minimum (${minValue}).`, "success");
         } else if (val > maxValue) {
             inputElement.value = maxValue;
-            showToast(`Value capped at maximum limit (${maxValue}).`, "error");
+            showToast(`Value capped at maximum limit (${maxValue}).`, "success");
         }
     });
 }
