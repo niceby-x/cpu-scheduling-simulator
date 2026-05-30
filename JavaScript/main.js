@@ -139,6 +139,17 @@ const store = {
         }
     },
 
+    markFinished() {
+        // IMMUTABLE UPDATE: Flip finishedNotified to true without mutating
+        // the existing state object directly. Consistent with every other
+        // store method that uses spread-copy rather than direct assignment.
+        this.state.playback = { ...this.state.playback, finishedNotified: true };
+        // No notify() call here — this is a write-once internal flag used
+        // only to prevent the "Playback finished!" toast from firing more
+        // than once. Re-rendering the subscriber for this change alone would
+        // cause a redundant frame render with no visible difference.
+    },
+
     reset() {
         this.stopAutoPlay();
         this.state.simulationData = null;
@@ -226,10 +237,13 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelector(".export-section").style.display = "flex";
             renderTable(pb.processes);
             
-            // Prevent the success toast from spamming if state triggers again
+            // Prevent the success toast from spamming if state triggers again.
+            // FIX: Use store.markFinished() instead of directly mutating pb —
+            // direct mutation (pb.finishedNotified = true) bypasses the store's
+            // immutable spread-copy pattern used everywhere else.
             if (!pb.finishedNotified) {
                 showToast("Playback finished!", "success");
-                pb.finishedNotified = true; 
+                store.markFinished();
             }
         }
     });
