@@ -401,13 +401,16 @@ export function loadDefaultProcesses() {
     const processBody = document.getElementById("process-body");
     processBody.innerHTML = ""; // Clear all existing rows first
 
-    // Add five default processes with varied burst times and priorities for demonstration
+    // Default processes use staggered arrival times so the simulator demonstrates
+    // idle gaps and arrival-driven scheduling from the very first run.
+    // P1 and P2 finish at time 3. P3 doesn't arrive until time 5, creating an Idle gap!
+    // Preemptive algorithms will also show mid-run context switches when P4 arrives.
     // Arguments: addProcessRow(arrivalTime, burstTime, priority)
-    addProcessRow(0, 2, 2); // P1: Priority 2 (Medium)
-    addProcessRow(0, 1, 1); // P2: Priority 1 (High)
-    addProcessRow(0, 8, 4); // P3: Priority 4 (Low)
-    addProcessRow(0, 4, 3); // P4: Priority 3 (Medium-Low)
-    addProcessRow(0, 5, 2); // P5: Priority 2 (Medium)
+    addProcessRow(0, 2, 2); // P1: arrives at 0, burst 2, Priority 2
+    addProcessRow(0, 1, 1); // P2: arrives at 0, burst 1, Priority 1 (CPU finishes at tick 3)
+    addProcessRow(5, 8, 4); // P3: arrives at 5, burst 8, Priority 4 (Idle gap from 3 to 5!)
+    addProcessRow(7, 3, 3); // P4: arrives at 7, burst 3, Priority 3 (Preempts P3 in SRT!)
+    addProcessRow(12, 4, 2); // P5: arrives at 12, burst 4, Priority 2
 }
 
 // ─────────────────────────────────────────────────────────────────────
