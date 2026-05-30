@@ -421,6 +421,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // Wires click handlers onto every <th class="sortable"> in the
     // comparison table. Toggles asc/desc on repeated clicks and updates
     // the sort-icon class so CSS can swap the arrow glyph.
+    //
+    // Called ONCE during initialization (see bottom of DOMContentLoaded).
+    // The <th> elements are static HTML — they are never torn down and
+    // rebuilt — so a single registration is sufficient for the lifetime
+    // of the page. Calling this inside handleCompareResult on every
+    // comparison would stack duplicate listeners, causing N handlers to
+    // fire per click after N comparisons.
     function attachSortListeners() {
         document.querySelectorAll("#comparison-table thead th.sortable").forEach(th => {
             th.addEventListener("click", () => {
@@ -477,7 +484,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         renderComparisonRows();
         renderComparisonSummary();
-        attachSortListeners();
+        // NOTE: attachSortListeners() is NOT called here. The sort headers are
+        // static HTML elements that never get replaced, so their click handlers
+        // are registered once at page load (see initialization block below).
+        // Calling it here on every comparison would stack duplicate listeners.
 
         document.getElementById("comparison-modal").classList.add("active");
     }
@@ -498,6 +508,13 @@ document.addEventListener("DOMContentLoaded", () => {
     loadDefaultProcesses();
     document.getElementById("algo-description").textContent = algoDescriptions[algorithmSelect.value];
     enforceStrictInput(quantumInput, 1, 100); // Quantum must be between 1 and 100
+
+    // Wire the comparison table sort headers exactly once. The <th> elements
+    // are static — they exist in the HTML from first paint and are never
+    // recreated — so a single registration here covers all future comparisons.
+    // This replaces the previous pattern of calling attachSortListeners() inside
+    // handleCompareResult, which stacked N duplicate handlers after N comparisons.
+    attachSortListeners();
 
 
     // ── Algorithm Selection ───────────────────────────────────────────
