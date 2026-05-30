@@ -577,9 +577,10 @@ export function renderGanttChart(gantt, totalTime) {
 // renderTable(processes)
 //
 // Populates the results metrics table with each process's computed
-// Waiting Time (WT) and Turnaround Time (TAT) after a simulation runs.
-// Also triggers animated counters for the Average WT and Average TAT
-// summary stats displayed below the table.
+// Waiting Time (WT), Turnaround Time (TAT), and Response Time after a
+// simulation runs. Also triggers animated counters for the Average WT,
+// Average TAT, and Average Response Time summary stats displayed below
+// the table.
 //
 // Parameters:
 //   - processes : The updated process array returned by an algorithm,
@@ -589,20 +590,22 @@ export function renderGanttChart(gantt, totalTime) {
 //   - Sorts processes by their numeric ID (P1, P2, P3...) before rendering
 //     so the table always displays in sequential process order regardless
 //     of the order in which processes completed.
-//   - Accumulates total WT and TAT to compute averages for the stat cards.
+//   - Accumulates total WT, TAT, and Response Time to compute averages
+//     for the stat cards.
 //   - Calls animateStat() to smoothly count up the average value displays.
 // ─────────────────────────────────────────────────────────────────────
 export function renderTable(processes) {
     const tbody = document.getElementById("results-body");
     tbody.innerHTML = "";
-    let tWt = 0, tTat = 0;
+    let tWt = 0, tTat = 0, tResp = 0;
 
     // Sort by process number so results always appear in P1, P2, P3... order
     const list = [...processes].sort((a, b) => parseInt(a.id.slice(1)) - parseInt(b.id.slice(1)));
 
     list.forEach(p => {
-        tWt  += p.wt;
-        tTat += p.tat;
+        tWt   += p.wt;
+        tTat  += p.tat;
+        tResp += p.respTime;
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>
@@ -623,8 +626,9 @@ export function renderTable(processes) {
 
     // Animate the average stat cards from their previous value to the new one
     const n = processes.length;
-    animateStat("avg-wt",  (tWt  / n).toFixed(2));
-    animateStat("avg-tat", (tTat / n).toFixed(2));
+    animateStat("avg-wt",   (tWt   / n).toFixed(2));
+    animateStat("avg-tat",  (tTat  / n).toFixed(2));
+    animateStat("avg-resp", (tResp / n).toFixed(2));
 }
 
 // ─────────────────────────────────────────────────────────────────────
