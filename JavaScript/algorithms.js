@@ -287,6 +287,14 @@ export function runRR(processes, quantum) {
     // This prevents a process from being enqueued twice at the same time.
     let inQueue = new Array(n).fill(false);
 
+    // 'prev' tracks the ID of the last process (or 'Idle') that ran.
+    // Used to merge consecutive Gantt blocks for the same process into one entry,
+    // keeping the raw gantt array lean and consistent with runSRT / runPriority_P.
+    // Without this, a process that receives multiple consecutive quanta (e.g. when
+    // it's the only process in the queue) produces a separate block per quantum,
+    // inflating the gantt array and the exported Excel timeline unnecessarily.
+    let prev = null;
+
     // Sort the master process list by arrival order for consistent arrival scanning.
     let sorted = [...processes].sort((a, b) => a.at - b.at || a.originalIndex - b.originalIndex);
     
@@ -294,7 +302,10 @@ export function runRR(processes, quantum) {
     let time = Math.min(...sorted.map(p => p.at));
 
     // If processes don't start at time 0, insert an initial Idle block.
-    if (time > 0) gantt.push({ id: 'Idle', start: 0, end: time, color: 'transparent' });
+    if (time > 0) {
+        gantt.push({ id: 'Idle', start: 0, end: time, color: 'transparent' });
+        prev = 'Idle';
+    }
     
     // Populate the initial ready queue with all processes that have already arrived.
     sorted.forEach(p => {
@@ -315,9 +326,18 @@ export function runRR(processes, quantum) {
             // Execute for the lesser of: the time quantum OR remaining burst time.
             // This ensures a process is never given more time than it actually needs.
             let exec = Math.min(cur.remTime, quantum);
-            gantt.push({ id: cur.id, start: time, end: time + exec, color: cur.color });
+
+            // Extend the last Gantt block if this process ran in the previous slot,
+            // otherwise open a fresh block. This keeps consecutive quanta merged.
+            if (prev === cur.id) {
+                gantt[gantt.length - 1].end = time + exec;
+            } else {
+                gantt.push({ id: cur.id, start: time, end: time + exec, color: cur.color });
+            }
+
             time += exec;
             cur.remTime -= exec;
+            prev = cur.id;
             
             // After executing, check if any new processes arrived during this execution window.
             // New arrivals are added to the back of the queue before re-queuing the current process.
@@ -344,8 +364,16 @@ export function runRR(processes, quantum) {
             let rem = sorted.filter(p => p.remTime > 0);
             if (!rem.length) break;
             let next = Math.min(...rem.map(p => p.at));
-            gantt.push({ id: 'Idle', start: time, end: next, color: 'transparent' });
+
+            // Merge consecutive idle periods into one block, consistent with other algorithms.
+            if (prev === 'Idle') {
+                gantt[gantt.length - 1].end = next;
+            } else {
+                gantt.push({ id: 'Idle', start: time, end: next, color: 'transparent' });
+            }
+
             time = next;
+            prev = 'Idle';
 
             // Admit any processes that have now arrived into the ready queue.
             sorted.forEach(p => {
