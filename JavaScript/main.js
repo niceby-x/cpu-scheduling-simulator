@@ -29,7 +29,6 @@ const simWorker = new Worker('./JavaScript/worker.js', { type: 'module' });
 //   algoDescriptions   — map of algorithm keys to their description strings
 //   readProcessesFromTable — reads and parses the process input table into objects
 //   validateProcesses  — checks for input errors before running a simulation
-//   cloneProcesses     — deep-copies process data (needed for comparison runs)
 //   addProcessRow      — appends a new editable row to the process input table
 //   loadDefaultProcesses — resets the table to a predefined set of sample processes
 //   renderGanttChart   — draws the Gantt chart from an array of execution blocks
@@ -41,7 +40,6 @@ import {
     algoDescriptions, 
     readProcessesFromTable, 
     validateProcesses, 
-    cloneProcesses, 
     addProcessRow, 
     loadDefaultProcesses, 
     renderGanttChart, 
