@@ -203,10 +203,17 @@ export function runSRT(processes) {
             if (cur.firstStart === -1) cur.firstStart = time;
 
             // Find the next future arrival that could preempt the current process.
-            // Only arrivals of processes with less remaining time than cur qualify.
+            // A future process p can preempt cur only if p.remTime is strictly less
+            // than the time cur will have *remaining* at the moment p arrives.
+            // By the time p.at is reached, cur will have run for (p.at - time) more
+            // ticks, leaving it with: cur.remTime - (p.at - time).
+            // So the preemption condition is: p.remTime < cur.remTime - (p.at - time).
+            // Using + instead of - would make the threshold larger than cur's actual
+            // remaining time, causing nearly every future arrival to pass the filter
+            // and forcing unnecessary loop iterations and Gantt block merges.
             let futureArrivals = processes.filter(p => p.at > time && p.remTime > 0);
             let nextPreemption = futureArrivals
-                .filter(p => p.remTime < cur.remTime + (p.at - time)) // could preempt
+                .filter(p => p.remTime < cur.remTime - (p.at - time)) // could preempt
                 .reduce((min, p) => Math.min(min, p.at), Infinity);
 
             // Jump to whichever comes first: completion or a potential preemption.
