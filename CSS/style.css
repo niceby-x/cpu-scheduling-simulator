@@ -896,6 +896,49 @@ td input[type="number"]:focus {
 .delete-btn:hover { color: var(--danger); background: var(--danger-dim); }
 
 /* ================================================================
+   CELL STEPPER — +/− controls for Arrival, Burst, and Priority fields
+   Mirrors the .q-btn visual language from the Time Quantum input but
+   sized to sit compactly inside a table cell. The input inside uses
+   flex:1 to fill the remaining space between the two buttons.
+   ================================================================ */
+.cell-stepper {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.cell-q-btn {
+    width: 26px;
+    flex-shrink: 0;
+    border-radius: var(--r-xs);
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-sub);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all var(--t);
+    line-height: 1;
+    font-family: var(--f-body);
+    padding: 0;
+}
+.cell-q-btn:hover {
+    background: var(--accent-muted);
+    border-color: var(--accent-border-md);
+    color: var(--p-lavender);
+}
+.cell-q-btn:active { transform: scale(0.88); }
+
+/* The number input fills the space between the two stepper buttons */
+.cell-stepper input[type="number"] {
+    flex: 1;
+    min-width: 0;
+    width: 0; /* overridden by flex-grow; prevents overflow in narrow cells */
+}
+
+/* ================================================================
    OUTPUT SECTION
    ================================================================ */
 .output-section {
@@ -1859,7 +1902,18 @@ input:checked + .slider:before {
     #process-body tr td:nth-child(3) { grid-area: bt; }
     #process-body tr td:nth-child(4) { grid-area: pri; }
 
-    /* Number inputs fill the full card column for a large, comfortable touch target */
+    /* Hide +/- buttons on mobile — columns are too narrow to show the number
+       alongside two buttons. The input fills the full column width instead
+       and users type directly. The buttons remain functional on desktop. */
+    #process-body tr .cell-q-btn { display: none; }
+
+    /* Stepper wrappers and their inputs fill the full card column width */
+    #process-body tr td:nth-child(2) .cell-stepper,
+    #process-body tr td:nth-child(3) .cell-stepper,
+    #process-body tr td:nth-child(4) .cell-stepper {
+        width: 100%;
+    }
+
     #process-body tr td:nth-child(2) input[type="number"],
     #process-body tr td:nth-child(3) input[type="number"],
     #process-body tr td:nth-child(4) input[type="number"] {

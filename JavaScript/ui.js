@@ -357,7 +357,10 @@ export function addProcessRow(at = 0, bt = 1, priority = 1) {
     const idx   = currentRows;
     const color = colors[idx % colors.length];
 
-    // Build the table row with all input fields and the delete button
+    // Build the table row with all input fields and the delete button.
+    // AT, BT, and Priority each use a .cell-stepper wrapper (− input +) that
+    // mirrors the Time Quantum stepper, giving consistent micro-interactions
+    // across the whole dashboard without relying on native spin-buttons.
     const tr = document.createElement("tr");
     tr.innerHTML = `
         <td>
@@ -366,9 +369,27 @@ export function addProcessRow(at = 0, bt = 1, priority = 1) {
                 <input type="text" class="p-id" readonly>
             </div>
         </td>
-        <td><input type="number" class="p-at"       value="${at}"       min="0"></td>
-        <td><input type="number" class="p-bt"       value="${bt}"       min="1"></td>
-        <td><input type="number" class="p-priority" value="${priority}" min="0"></td>
+        <td>
+            <div class="cell-stepper">
+                <button class="cell-q-btn" type="button" aria-label="Decrease arrival time">−</button>
+                <input type="number" class="p-at" value="${at}" min="0" max="999">
+                <button class="cell-q-btn" type="button" aria-label="Increase arrival time">+</button>
+            </div>
+        </td>
+        <td>
+            <div class="cell-stepper">
+                <button class="cell-q-btn" type="button" aria-label="Decrease burst time">−</button>
+                <input type="number" class="p-bt" value="${bt}" min="1" max="999">
+                <button class="cell-q-btn" type="button" aria-label="Increase burst time">+</button>
+            </div>
+        </td>
+        <td>
+            <div class="cell-stepper">
+                <button class="cell-q-btn" type="button" aria-label="Decrease priority">−</button>
+                <input type="number" class="p-priority" value="${priority}" min="0" max="99">
+                <button class="cell-q-btn" type="button" aria-label="Increase priority">+</button>
+            </div>
+        </td>
         <td><button class="delete-btn" title="Remove">✕</button></td>
     `;
 
@@ -376,6 +397,33 @@ export function addProcessRow(at = 0, bt = 1, priority = 1) {
     tr.querySelectorAll('input[type="number"]').forEach(inp =>
         inp.addEventListener('focus', function () { this.select(); })
     );
+
+    // ── Cell Stepper Handlers ─────────────────────────────────────────
+    // Wire each .cell-stepper's − / + buttons to increment or decrement
+    // their paired input within the min/max bounds declared on the element.
+    // The dispatched 'input' event bubbles up to #process-body so main.js's
+    // markStale() listener fires exactly as it would for manual typing.
+    tr.querySelectorAll('.cell-stepper').forEach(stepper => {
+        const input       = stepper.querySelector('input');
+        const [dec, inc]  = stepper.querySelectorAll('.cell-q-btn');
+        const min         = parseInt(input.min);
+        const max         = parseInt(input.max);
+
+        dec.addEventListener('click', () => {
+            const val = parseInt(input.value);
+            if (!isNaN(val) && val > min) {
+                input.value = val - 1;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+        inc.addEventListener('click', () => {
+            const val = parseInt(input.value);
+            if (!isNaN(val) && val < max) {
+                input.value = val + 1;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+    });
 
     // Apply range constraints to each numeric field in this row
     enforceStrictInput(tr.querySelector('.p-at'),       0,  999);
