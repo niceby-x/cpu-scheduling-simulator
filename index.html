@@ -41,12 +41,131 @@
 
     <div class="page">
 
-        <!-- Hero -->
+        <!-- Hero — split two-column layout -->
         <header class="hero">
-            <p class="hero-eyebrow">OS Kernel Simulator</p>
-            <h1>Process <em>Scheduling</em></h1>
-            <p class="hero-sub">Pick an algorithm, load your processes, and watch the CPU work.</p>
+
+            <div class="hero-grid">
+
+            <!-- LEFT: text column -->
+            <div class="hero-left">
+
+                <!-- Pill eyebrow badge -->
+                <div class="eyebrow-pill">
+                    <span class="eyebrow-dot"></span>
+                    <span>OS Kernel Simulator</span>
+                </div>
+
+                <!-- Headline with left accent bar -->
+                <div class="headline-wrap">
+                    <div class="accent-bar"></div>
+                    <h1>Process<em>Scheduling</em></h1>
+                </div>
+
+                <p class="hero-sub">Pick an algorithm, load your processes, and watch the CPU work in real time.</p>
+
+                <!-- Compact stat pills -->
+                <div class="stat-pills" aria-label="Simulator capabilities">
+                    <div class="stat-pill">
+                        <span class="stat-pill-num">7</span>
+                        <span class="stat-pill-label">Algorithms</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-pill-num">10</span>
+                        <span class="stat-pill-label">Max Processes</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-pill-num">4</span>
+                        <span class="stat-pill-label">Metrics</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT: live preview visualization -->
+            <div class="hero-right">
+                <div class="viz-card glass">
+
+                    <div class="viz-header">
+                        <span class="viz-title">Live Simulation Preview</span>
+                        <span class="viz-live">Running</span>
+                    </div>
+
+                    <!-- Mini Gantt chart (decorative) -->
+                    <div class="viz-gantt" aria-hidden="true">
+                        <div class="gp-row">
+                            <span class="gp-label" style="color:#ef4444">P1</span>
+                            <div class="gp-track">
+                                <div class="gp-bar" style="background:#ef4444; width:40%; left:0%">0→4</div>
+                            </div>
+                            <span class="gp-time">4u</span>
+                        </div>
+                        <div class="gp-row">
+                            <span class="gp-label" style="color:#3b82f6">P2</span>
+                            <div class="gp-track">
+                                <div class="gp-bar" style="background:#3b82f6; width:20%; left:40%">4→6</div>
+                            </div>
+                            <span class="gp-time">2u</span>
+                        </div>
+                        <div class="gp-row">
+                            <span class="gp-label" style="color:#10b981">P3</span>
+                            <div class="gp-track">
+                                <div class="gp-bar" style="background:#10b981; width:30%; left:60%">6→9</div>
+                            </div>
+                            <span class="gp-time">3u</span>
+                        </div>
+                        <div class="gp-row">
+                            <span class="gp-label" style="color:#f59e0b">P4</span>
+                            <div class="gp-track">
+                                <div class="gp-bar" style="background:#f59e0b; width:10%; left:90%">9→10</div>
+                            </div>
+                            <span class="gp-time">1u</span>
+                        </div>
+                        <div class="gp-row">
+                            <span class="gp-label" style="color:#8b5cf6">P5</span>
+                            <div class="gp-track">
+                                <div class="gp-bar" style="background:#8b5cf6; width:55%; left:0%"></div>
+                                <div class="gp-bar" style="background:#8b5cf6; opacity:0.45; width:20%; left:80%"></div>
+                            </div>
+                            <span class="gp-time">8u</span>
+                        </div>
+                    </div>
+
+                    <!-- Time axis -->
+                    <div class="viz-axis" aria-hidden="true">
+                        <span>0</span><span>2</span><span>4</span>
+                        <span>6</span><span>8</span><span>10</span>
+                    </div>
+
+                    <!-- Algorithm chips -->
+                    <div class="viz-algo-row" aria-label="Available algorithms">
+                        <span class="viz-chip active">FCFS</span>
+                        <span class="viz-chip">SJF</span>
+                        <span class="viz-chip">SRT</span>
+                        <span class="viz-chip">RR</span>
+                        <span class="viz-chip">Priority</span>
+                    </div>
+
+                </div>
+            </div>
+
+            </div><!-- /.hero-grid -->
         </header>
+
+        <script>
+            // Replay the Gantt bar grow-in animation every 5 seconds
+            (function() {
+                const bars = document.querySelectorAll('.gp-bar');
+                function replay() {
+                    bars.forEach((b, i) => {
+                        b.style.animation = 'none';
+                        b.offsetHeight; // force reflow
+                        b.style.animation = '';
+                        b.style.animationDelay = (0.08 + i * 0.15) + 's';
+                    });
+                }
+                setInterval(replay, 5000);
+            })();
+        </script>
 
         <!-- Two-column dashboard -->
         <div class="dashboard">
@@ -262,43 +381,63 @@
 
         </div><!-- /#output-section -->
 
-        <!-- Comparison -->
+        <!-- Comparison Modal -->
         <div id="comparison-modal" class="modal-overlay" aria-hidden="true">
-            <div id="comparison-section" class="glass out-card modal-content">
-                <div class="out-card-header">
-                    <div class="comparison-header-left">
-                        <p class="panel-label">Algorithm Comparison</p>
-                        <span class="badge">Lower = Better ↓</span>
+            <div id="comparison-section" class="modal-content">
+
+                <!-- Header -->
+                <div class="modal-header">
+                    <div class="modal-header-left">
+                        <p class="modal-eyebrow">Algorithm comparison · <span id="modal-quantum-label">Q = 2</span></p>
+                        <h2 class="modal-title">Which algorithm performed best?</h2>
+                        <p class="modal-subtitle">Lower values are better ↓ &nbsp;·&nbsp; Click column headers to sort</p>
                     </div>
-                    <button id="close-modal-btn" class="btn icon-btn" title="Close">✕</button>
+                    <button id="close-modal-btn" class="modal-close-btn" title="Close comparison" aria-label="Close comparison modal">✕</button>
                 </div>
-                <div class="table-responsive">
-                    <div class="comparison-legend">
-                        <span class="legend-item">
-                            <span class="legend-swatch legend-swatch--green"></span>Best Avg WT / Avg TAT (per row)
-                        </span>
-                        <span class="legend-divider"></span>
-                        <span class="legend-item">
-                            <span class="legend-swatch legend-swatch--cyan"></span>Best response time
-                        </span>
-                        <span class="legend-divider"></span>
-                        <span class="legend-item">
-                            <span class="legend-swatch legend-swatch--amber"></span>Overall champion
-                        </span>
+
+                <!-- Champion banner — populated by JS -->
+                <div id="champion-banner" class="champion-banner" style="display:none;">
+                    <span class="champion-banner-icon" aria-hidden="true">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"></path>
+                            <path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"></path>
+                            <path d="M6 3h12v10a6 6 0 0 1-12 0V3z"></path>
+                            <line x1="12" y1="19" x2="12" y2="22"></line>
+                            <line x1="8" y1="22" x2="16" y2="22"></line>
+                        </svg>
+                    </span>
+                    <div class="champion-banner-body">
+                        <p class="champion-banner-label">Overall champion</p>
+                        <p class="champion-banner-name" id="champion-name">—</p>
                     </div>
+                    <span class="champion-banner-tag" id="champion-tag">Best in 3 / 3 metrics</span>
+                </div>
+
+                <!-- Table -->
+                <div class="table-responsive">
                     <table id="comparison-table">
                         <thead>
                             <tr>
-                                <th style="text-align:left; padding-left:20px;">Algorithm</th>
-                                <th class="sortable" data-col="avgWt">Avg Waiting <span class="sort-icon">↕</span></th>
-                                <th class="sortable" data-col="avgTat">Avg Turnaround <span class="sort-icon">↕</span></th>
-                                <th class="sortable" data-col="avgResp">Avg Response <span class="sort-icon">↕</span></th>
+                                <th style="text-align:left; padding-left:16px;">Algorithm</th>
+                                <th class="sortable" data-col="avgWt">Avg waiting <span class="sort-icon">↕</span></th>
+                                <th class="sortable" data-col="avgTat">Avg turnaround <span class="sort-icon">↕</span></th>
+                                <th class="sortable" data-col="avgResp">Avg response <span class="sort-icon">↕</span></th>
                             </tr>
                         </thead>
                         <tbody id="comparison-body"></tbody>
                     </table>
-                    <div id="comparison-summary" class="comparison-summary"></div>
                 </div>
+
+                <!-- Legend footer -->
+                <div class="comparison-legend-footer">
+                    <span class="clf-item"><span class="clf-dot clf-dot--amber"></span>Overall champion</span>
+                    <span class="clf-item"><span class="clf-dot clf-dot--green"></span>Category winner</span>
+                    <span class="clf-item"><span class="clf-dot clf-dot--neutral"></span>Other</span>
+                </div>
+
+                <!-- Summary sentence — kept for JS compatibility -->
+                <div id="comparison-summary" class="comparison-summary" style="display:none;"></div>
+
             </div>
         </div>
 

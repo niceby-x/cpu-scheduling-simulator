@@ -395,6 +395,11 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+        // Compute max values for proportional sparkbar widths
+        const maxWt   = Math.max(...computed.map(r => r.avgWt));
+        const maxTat  = Math.max(...computed.map(r => r.avgTat));
+        const maxResp = Math.max(...computed.map(r => r.avgResp));
+
         const tbody = document.getElementById("comparison-body");
         tbody.innerHTML = "";
 
@@ -407,12 +412,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const tatC       = isTatBest  ? "best-val" : "";
             const respC      = isRespBest ? "best-val" : "";
 
-            // Count how many of the 3 metrics this algorithm wins and
-            // show a pill badge so the user doesn't need to count stars.
             const wins = [isWtBest, isTatBest, isRespBest].filter(Boolean).length;
             const winsBadge = wins > 0
                 ? `<span class="wins-badge wins-badge--${wins}">${wins}/3</span>`
                 : "";
+
+            // Proportional bar widths (min 4% so zero-width bars still show)
+            const wtPct   = maxWt   > 0 ? Math.max(4, Math.round((res.avgWt   / maxWt)   * 100)) : 4;
+            const tatPct  = maxTat  > 0 ? Math.max(4, Math.round((res.avgTat  / maxTat)  * 100)) : 4;
+            const respPct = maxResp > 0 ? Math.max(4, Math.round((res.avgResp / maxResp) * 100)) : 4;
 
             if (isWtBest)   tr.classList.add("best-wt-row");
             if (isTatBest)  tr.classList.add("best-tat-row");
@@ -420,39 +428,61 @@ document.addEventListener("DOMContentLoaded", () => {
 
             tr.innerHTML = `
                 <td><strong>${res.name}</strong>${winsBadge}</td>
-                <td class="${wtC}">${res.avgWt.toFixed(2)}</td>
-                <td class="${tatC}">${res.avgTat.toFixed(2)}</td>
-                <td class="${respC}">${res.avgResp.toFixed(2)}</td>
+                <td class="${wtC}">
+                    <div class="metric-cell">
+                        <span class="metric-val">${res.avgWt.toFixed(2)}</span>
+                        <div class="metric-bar-wrap"><div class="metric-bar" style="width:${wtPct}%"></div></div>
+                    </div>
+                </td>
+                <td class="${tatC}">
+                    <div class="metric-cell">
+                        <span class="metric-val">${res.avgTat.toFixed(2)}</span>
+                        <div class="metric-bar-wrap"><div class="metric-bar" style="width:${tatPct}%"></div></div>
+                    </div>
+                </td>
+                <td class="${respC}">
+                    <div class="metric-cell">
+                        <span class="metric-val">${res.avgResp.toFixed(2)}</span>
+                        <div class="metric-bar-wrap"><div class="metric-bar" style="width:${respPct}%"></div></div>
+                    </div>
+                </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
     // ── renderComparisonSummary ───────────────────────────────────────
-    // Generates one plain-English sentence below the table that names
-    // the winner(s) so the user doesn't have to read every cell.
+    // Populates the champion banner above the table with the overall
+    // winner's name and win count, and hides it when no single champion.
     function renderComparisonSummary() {
         const el = document.getElementById("comparison-summary");
-        if (!el || !_compareData) return;
+        const banner     = document.getElementById("champion-banner");
+        const bannerName = document.getElementById("champion-name");
+        const bannerTag  = document.getElementById("champion-tag");
 
+        if (!_compareData) return;
         const { computed, bestWt, bestTat, bestResp } = _compareData;
+
         const champion = computed.find(
             r => r.avgWt === bestWt && r.avgTat === bestTat && r.avgResp === bestResp
         );
 
         if (champion) {
-            el.innerHTML = `<span class="summary-champion">${champion.name}</span> dominates — best in all 3 metrics.`;
+            if (bannerName) bannerName.textContent = champion.name;
+            if (bannerTag)  bannerTag.textContent  = "Best in 3 / 3 metrics";
+            if (banner)     banner.style.display   = "flex";
+            if (el)         el.innerHTML = `<span class="summary-champion">${champion.name}</span> dominates — best in all 3 metrics.`;
         } else {
-            // FIX: Use three separate winners — wtWinner only holds the best
-            // avg waiting time, not TAT. The old label "wins WT + TAT" was
-            // overstating it. tatWinner is now found independently.
-            const wtWinner  = computed.find(r => r.avgWt   === bestWt);
-            const tatWinner = computed.find(r => r.avgTat  === bestTat);
-            const rtWinner  = computed.find(r => r.avgResp === bestResp);
-            el.innerHTML =
-                `<span class="summary-winner">${wtWinner.name}</span> wins Avg Waiting Time. ` +
-                `<span class="summary-winner">${tatWinner.name}</span> wins Avg Turnaround Time. ` +
-                `<span class="summary-winner">${rtWinner.name}</span> wins Avg Response Time.`;
+            if (banner) banner.style.display = "none";
+            if (el) {
+                const wtWinner  = computed.find(r => r.avgWt   === bestWt);
+                const tatWinner = computed.find(r => r.avgTat  === bestTat);
+                const rtWinner  = computed.find(r => r.avgResp === bestResp);
+                el.innerHTML =
+                    `<span class="summary-winner">${wtWinner.name}</span> wins Avg Waiting Time. ` +
+                    `<span class="summary-winner">${tatWinner.name}</span> wins Avg Turnaround Time. ` +
+                    `<span class="summary-winner">${rtWinner.name}</span> wins Avg Response Time.`;
+            }
         }
     }
 
@@ -495,9 +525,13 @@ document.addEventListener("DOMContentLoaded", () => {
         compareBtn.classList.remove("is-loading");
         compareBtn.disabled = false;
 
-        const modalHeaderLabel = document.querySelector("#comparison-section .panel-label");
+        const modalHeaderLabel = document.querySelector("#comparison-section .modal-title");
         if (modalHeaderLabel) {
-            modalHeaderLabel.textContent = `Algorithm Comparison (Time Quantum = ${ctx.quantum})`;
+            modalHeaderLabel.textContent = `Which algorithm performed best?`;
+        }
+        const modalQuantumLabel = document.getElementById("modal-quantum-label");
+        if (modalQuantumLabel) {
+            modalQuantumLabel.textContent = `Q = ${ctx.quantum}`;
         }
 
         const computed = results.map(res => {
