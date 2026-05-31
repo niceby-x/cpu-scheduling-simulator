@@ -716,6 +716,9 @@ td input[type="number"]:focus {
 .gantt-wrapper {
     overflow-x: auto;
     padding-bottom: 12px;
+    /* NEW: Add horizontal padding to prevent the first and last numbers from clipping */
+    padding-left: 12px;  
+    padding-right: 12px; 
 }
 
 /* Custom Scrollbar for Gantt Wrapper */
@@ -738,14 +741,14 @@ td input[type="number"]:focus {
 
 .gantt-container {
     display: flex;
-    height: 72px;
-    border-radius: 100px;
+    height: 56px; /* Reduced from 72px for a sleeker, widescreen look */
+    border-radius: var(--r-lg); /* Changed from 100px to match your glass cards perfectly */
     overflow: hidden;
     border: 1px solid var(--glass-border);
     background: rgba(255,255,255,0.02);
     min-width: 100%; 
     width: max-content; 
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
+    box-shadow: inset 0 2px 12px rgba(0,0,0,0.15); /* Softened inner shadow */
 }
 
 .gantt-block {
@@ -753,32 +756,47 @@ td input[type="number"]:focus {
     align-items: center;
     justify-content: center;
     font-family: var(--f-mono);
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: rgba(255,255,255,0.95);
-    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    font-size: 0.8rem; /* Slightly larger for readability */
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4); /* Stronger text shadow for contrast */
     width: 0%;
     overflow: hidden;
     white-space: nowrap;
     box-shadow: inset -1px 0 0 rgba(255,255,255,0.15), inset 1px 0 0 rgba(0,0,0,0.05);
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em; /* Increased tracking */
     position: relative;
     cursor: crosshair;
-    
-    /* Flexbox fixes */
     min-width: 40px; 
     padding: 0 4px;
     flex-shrink: 1; 
-    transition: width 0.7s var(--spring), flex-grow 0.7s var(--spring), min-width 0.7s var(--spring), padding 0.7s var(--spring);
+    /* NEW: added 'filter' to the transition list for the hover effect */
+    transition: width 0.7s var(--spring), flex-grow 0.7s var(--spring), min-width 0.7s var(--spring), padding 0.7s var(--spring), filter 0.2s ease;
 }
 
-/* Gloss sheen */
+/* NEW: Add a hover brightness bump to interactive blocks */
+.gantt-block:not(.idle):hover {
+    filter: brightness(1.15) saturate(1.1);
+    z-index: 10; /* Brings the shadow/border above adjacent blocks */
+}
+
+/* Top gloss sheen — refined three-stop fade */
 .gantt-block::after {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
-    height: 48%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent);
+    height: 44%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 70%, transparent 100%);
+    pointer-events: none;
+}
+
+/* Bottom depth fade — grounds each block with subtle shadow */
+.gantt-block::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 28%;
+    background: linear-gradient(0deg, rgba(0,0,0,0.18) 0%, transparent 100%);
     pointer-events: none;
 }
 
@@ -787,15 +805,31 @@ td input[type="number"]:focus {
 .gantt-block.idle {
     background: repeating-linear-gradient(
         -45deg,
-        rgba(255,255,255,0.015),
-        rgba(255,255,255,0.015) 5px,
-        transparent 5px,
-        transparent 10px
+        rgba(0,0,0,0.04),
+        rgba(0,0,0,0.04) 10px,
+        transparent 10px,
+        transparent 20px
     ) !important;
     color: var(--text-dim);
     text-shadow: none;
+    box-shadow: inset 0 3px 8px rgba(0,0,0,0.2) !important;
 }
-.gantt-block.idle::after { display: none; }
+.gantt-block.idle::after  { display: none; }
+.gantt-block.idle::before { display: none; }
+
+/* Light theme override for the recessed idle block */
+[data-theme="light"] .gantt-block.idle {
+    background: repeating-linear-gradient(
+        -45deg,
+        rgba(0,0,0,0.03),
+        rgba(0,0,0,0.03) 10px,
+        transparent 10px,
+        transparent 20px
+    ) !important;
+    box-shadow: inset 0 3px 8px rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .gantt-block.idle::after  { display: none; }
+[data-theme="light"] .gantt-block.idle::before { display: none; }
 
 /* ── Upgraded Timeline Layout ── */
 .timeline {
@@ -813,16 +847,35 @@ td input[type="number"]:focus {
     transition: width 0.7s var(--spring), flex-grow 0.7s var(--spring), min-width 0.7s var(--spring), padding 0.7s var(--spring);
 }
 
+/* Update this in style.css */
 .time-marker {
     position: absolute;
     right: 0;
     transform: translateX(50%);
     font-family: var(--f-mono);
-    font-size: 0.72rem;
+    font-size: 0.75rem; /* Slightly larger */
     color: var(--text-dim);
     font-weight: 600;
-    top: 0;
+    top: 6px; /* Pushed down slightly to make room for the tick mark */
     transition: color var(--t);
+}
+
+/* NEW: Add a visual tick mark pointing up to the chart boundary */
+.time-marker::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 4px;
+    background: var(--glass-border);
+}
+
+/* Adjust the staggered numbers to account for the new top margin */
+.time-block:nth-child(even) .time-marker:not(.start-marker) {
+    top: 22px; 
+    color: var(--p-lavender); 
 }
 
 /* The start marker (0) for the very first block */
@@ -830,12 +883,6 @@ td input[type="number"]:focus {
     left: 0;
     right: auto;
     transform: translateX(-50%);
-}
-
-/* The Magic Stagger: Alternates vertical position of every other number */
-.time-block:nth-child(even) .time-marker:not(.start-marker) {
-    top: 16px; 
-    color: var(--p-lavender); 
 }
 
 /* ── Stats row — 2 cards only (WT + TAT) ── */
@@ -898,6 +945,16 @@ td input[type="number"]:focus {
     color: var(--text-sub); 
     text-transform: uppercase;
     letter-spacing: 0.12em;
+}
+
+.stat-value {
+    font-family: var(--f-display);
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    text-shadow: 0 0 28px var(--accent-glow);
 }
 
 .stat-unit {
@@ -979,338 +1036,178 @@ td input[type="number"]:focus {
     border-bottom-color: transparent; 
 }
 
-/* ── Comparison modal header — inline title + badge ─────────────────── */
-.comparison-header-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-/* ── Wins badge — X/3 pill on highlighted rows ───────────────────────── */
-.wins-badge {
-    display: inline-block;
-    font-family: var(--f-mono);
-    font-size: 0.60rem;
-    font-weight: 600;
-    padding: 2px 7px;
-    border-radius: 100px;
-    margin-left: 8px;
-    vertical-align: middle;
-    letter-spacing: 0.04em;
-}
-
-.wins-badge--1 { background: rgba(6,  182, 212, 0.15); color: #06b6d4; }
-.wins-badge--2 { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-.wins-badge--3 { background: rgba(245,158,  11, 0.20); color: #f59e0b; }
-
-[data-theme="light"] .wins-badge--1 { color: #0891b2; }
-[data-theme="light"] .wins-badge--2 { color: #059669; }
-[data-theme="light"] .wins-badge--3 { color: #d97706; }
-
-/* ── Sortable column headers ─────────────────────────────────────────── */
-#comparison-table th.sortable {
-    cursor: pointer;
-    user-select: none;
-    transition: color 0.15s;
-}
-
-#comparison-table th.sortable:hover { color: var(--text-main); }
-
-.sort-icon {
-    opacity: 0; 
-    transition: opacity var(--t);
-}
-
-#comparison-table th.sortable:hover .sort-icon,
-#comparison-table th.sort-asc .sort-icon,
-#comparison-table th.sort-desc .sort-icon {
-    opacity: 0.5; /* Subtle appearance */
-}
-
-#comparison-table th.sort-asc  .sort-icon::before { content: '\2191'; }
-#comparison-table th.sort-desc .sort-icon::before { content: '\2193'; }
-#comparison-table th:not(.sort-asc):not(.sort-desc) .sort-icon::before { content: '\2195'; }
-
-/* ── Summary line ────────────────────────────────────────────────────── */
-/* Wrap the summary text in a distinct footer box */
-.comparison-summary {
-    margin-top: 24px;
-    padding: 16px;
-    background: var(--input-bg);
-    border-radius: var(--r-md);
-    border: 1px solid var(--glass-border);
-    text-align: center;
-    font-size: 0.85rem;
-}
-
-.summary-champion {
-    color: #f59e0b;
-    font-weight: 600;
-}
-
-.summary-winner {
-    color: #10b981;
-    font-weight: 600;
-}
-
-[data-theme="light"] .summary-champion { color: #d97706; }
-[data-theme="light"] .summary-winner   { color: #059669; }
-
-/* ── Comparison table legend ─────────────────────────────────────── */
-.comparison-legend {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 10px 20px 12px;
-    flex-wrap: wrap;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-family: var(--f-mono);
-    font-size: 0.70rem;
-    color: var(--text-sub);
-    letter-spacing: 0.02em;
-    padding: 0 8px;
-}
-
-/* Change the legend swatches from tall bars to circular dots */
-.legend-swatch {
-    display: inline-block;
-    width: 10px;      /* Changed from 3px */
-    height: 10px;     /* Changed from 14px */
-    border-radius: 50%; /* Makes them perfect circles */
-    flex-shrink: 0;
-}
-
-.legend-swatch--green  { background: #10b981; }
-.legend-swatch--cyan   { background: #06b6d4; }
-.legend-swatch--amber  { background: #f59e0b; }
-
-/* Align first swatch with the Algorithm column text (both at 20px) */
-.legend-item:first-child { padding-left: 0; }
-
-.legend-divider {
-    width: 1px;
-    height: 12px;
-    background: var(--glass-border);
-    flex-shrink: 0;
-}
-
-[data-theme="light"] .legend-swatch--green  { background: #059669; }
-[data-theme="light"] .legend-swatch--cyan   { background: #0891b2; }
-[data-theme="light"] .legend-swatch--amber  { background: #d97706; }
-
-/* ── Comparison Table Fixes & Enhancements ── */
-td.best-val {
-    color: #10b981; 
-    font-weight: 700;
-    font-family: var(--f-mono);
-}
-
-td.best-val::after { 
-    content: ' ★'; 
-    font-size: 0.75rem; 
-    opacity: 0.8;
-}
-
-#comparison-body tr td:first-child { 
-    text-align: left; 
-    padding-left: 20px; 
-    border-left: 3px solid transparent; 
-}
-
-/* ── Best Waiting Time row — cyan ────────────────────────────────────
-   In practice, best-wt-row and best-tat-row always coexist on the same
-   row (Avg TAT = Avg WT + constant), so their combined selector below
-   takes over and renders green. These single-class rules are the correct
-   fallback if that invariant ever breaks.                              */
-#comparison-body tr.best-wt-row td {
-    background: rgba(6, 182, 212, 0.07);
-    border-bottom-color: transparent;
-}
-
-#comparison-body tr.best-wt-row td:first-child {
-    border-left-color: #06b6d4;
-    border-top-left-radius: var(--r-md);
-    border-bottom-left-radius: var(--r-md);
-}
-
-#comparison-body tr.best-wt-row td:last-child {
-    border-top-right-radius: var(--r-md);
-    border-bottom-right-radius: var(--r-md);
-}
-
-/* ── Best Turnaround Time row — amber ────────────────────────────── */
-#comparison-body tr.best-tat-row td {
-    background: rgba(245, 158, 11, 0.07);
-    border-bottom-color: transparent;
-}
-
-#comparison-body tr.best-tat-row td:first-child {
-    border-left-color: #f59e0b;
-    border-top-left-radius: var(--r-md);
-    border-bottom-left-radius: var(--r-md);
-}
-
-#comparison-body tr.best-tat-row td:last-child {
-    border-top-right-radius: var(--r-md);
-    border-bottom-right-radius: var(--r-md);
-}
-
-/* ── Best Waiting + Turnaround row — green ───────────────────────────
-   WT and TAT winners are always the same algorithm, so this combined
-   selector fires on every real run. Higher specificity (1,2,2) beats
-   both single-class rules above.                                      */
-#comparison-body tr.best-wt-row.best-tat-row td {
-    background: rgba(16, 185, 129, 0.08);
-    border-bottom-color: transparent;
-}
-
-#comparison-body tr.best-wt-row.best-tat-row td:first-child {
-    border-left-color: #10b981;
-    border-top-left-radius: var(--r-md);
-    border-bottom-left-radius: var(--r-md);
-}
-
-#comparison-body tr.best-wt-row.best-tat-row td:last-child {
-    border-top-right-radius: var(--r-md);
-    border-bottom-right-radius: var(--r-md);
-}
-
-/* ── Best Response Time row — cyan ──────────────────────────────────
-   Response Time can have a different winner than WT/TAT (preemptive
-   algorithms serve processes sooner), so this row may appear separately
-   from the green row above.                                           */
-#comparison-body tr.best-rt-row td {
-    background: rgba(6, 182, 212, 0.07);
-    border-bottom-color: transparent;
-}
-
-#comparison-body tr.best-rt-row td:first-child {
-    border-left-color: #06b6d4;
-    border-top-left-radius: var(--r-md);
-    border-bottom-left-radius: var(--r-md);
-}
-
-#comparison-body tr.best-rt-row td:last-child {
-    border-top-right-radius: var(--r-md);
-    border-bottom-right-radius: var(--r-md);
-}
-
-/* ── Overall champion: wins all three metrics — amber/gold ───────────
-   One algorithm completely dominated: best WT, best TAT, best RT.
-   Amber/gold makes this row unmistakably stand out from the green
-   WT+TAT row. Specificity (1,3,2) beats all rules above.             */
-#comparison-body tr.best-wt-row.best-tat-row.best-rt-row td {
-    background: rgba(245, 158, 11, 0.11);
-    border-bottom-color: transparent;
-}
-
-#comparison-body tr.best-wt-row.best-tat-row.best-rt-row td:first-child {
-    border-left-color: #f59e0b;
-    border-top-left-radius: var(--r-md);
-    border-bottom-left-radius: var(--r-md);
-}
-
-#comparison-body tr.best-wt-row.best-tat-row.best-rt-row td:last-child {
-    border-top-right-radius: var(--r-md);
-    border-bottom-right-radius: var(--r-md);
-}
-
 /* ================================================================
-   COMPARISON MODAL
+   MODERN COMPARISON MODAL (CARD-BASED UI)
    ================================================================ */
+
+/* ── 1. The Modal Container & Backdrop ── */
 .modal-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: rgba(10, 8, 20, 0.4);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    opacity: 0;
-    pointer-events: none;
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(5, 4, 12, 0.6);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 88px 24px 32px;
+    opacity: 0; pointer-events: none;
     transition: opacity var(--t) ease;
 }
-
-.modal-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
-}
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
 
 .modal-content {
-    width: 100%;
-    max-width: 780px;
-    min-width: 0;      /* Allows the modal to shrink horizontally on small screens */
-    max-height: 90vh;  /* Prevents the modal from getting cut off vertically */
-    overflow-y: auto;  /* Adds a vertical scrollbar if the screen is very short */
-    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
-    transform: translateY(30px) scale(0.98);
+    width: 100%; max-width: 860px; min-width: 0;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    background: rgba(18, 14, 38, 0.85);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+    border-radius: var(--r-xl);
+    padding: 32px;
+    display: flex; flex-direction: column;
+    transform: translateY(30px) scale(0.97);
     transition: transform 0.4s var(--out);
 }
+.modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
 
-.modal-overlay.active .modal-content {
-    transform: translateY(0) scale(1);
+#comparison-section .out-card-header {
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding-bottom: 24px; margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+    flex-wrap: nowrap; /* FIX: Prevents the X button from wrapping */
 }
 
 #comparison-section .panel-label {
-    font-family: var(--f-display); 
-    font-size: 1.1rem; /* Slightly smaller so the long text fits */
-    text-transform: none;          
-    color: var(--text);
-    margin: 0;
-    line-height: 1.3;
+    font-family: var(--f-display); font-size: 1.25rem; font-weight: 700;
+    color: var(--text); margin: 0; line-height: 1.2;
+    text-transform: none; /* FIX: Prevents inherited uppercase */
+    letter-spacing: -0.01em; /* FIX: Prevents inherited wide tracking */
 }
 
-#comparison-section .out-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start; /* Anchors the close button to the top right */
-    gap: 16px;
-}
+.comparison-header-left { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 
-/* Allow the badge to wrap safely if the text gets too long */
-#comparison-section .comparison-header-left {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap; 
-    gap: 8px 12px;
-    min-width: 0;
-    flex-shrink: 1;
-}
-
-/* Close button — boosted contrast so it's clearly visible against the
-   glass modal surface. Uses opaque bg + stronger border + full-strength
-   text color instead of the muted defaults from .btn.icon-btn.        */
-/* Make the close button a sleek circle */
 #close-modal-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: none; /* Remove the heavy border */
-    background: rgba(255, 255, 255, 0.05); /* Very subtle background */
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%;
+    border: none; background: rgba(255, 255, 255, 0.05);
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t); cursor: pointer; color: var(--text-sub);
+}
+#close-modal-btn:hover { background: var(--danger-dim); color: var(--danger); }
+
+/* ── 2. Floating Legend Chips ── */
+.comparison-legend {
+    display: flex; gap: 12px; padding-bottom: 20px; flex-wrap: wrap;
+}
+.legend-item {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 100px; padding: 6px 14px;
+    font-family: var(--f-body); font-size: 0.8rem; font-weight: 500; color: var(--text);
+}
+.legend-swatch { width: 10px; height: 10px; border-radius: 50%; }
+.legend-swatch--green { background: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
+.legend-swatch--amber { background: #f59e0b; box-shadow: 0 0 10px rgba(245,158,11,0.4); }
+.legend-divider, .legend-swatch--cyan { display: none; } /* Simplified legend */
+
+/* ── 3. Transform Table into Grid Cards ── */
+#comparison-section .table-responsive {
+    overflow-y: auto; max-height: 55vh; padding-right: 8px; border: none;
+}
+/* Strip away table behavior */
+#comparison-table, #comparison-table thead, #comparison-table tbody, #comparison-table tr {
+    display: block; width: 100%; border: none;
+}
+#comparison-table tr {
+    display: grid;
+    grid-template-columns: minmax(220px, 2.2fr) 1fr 1fr 1fr;
+    align-items: center; gap: 8px;
 }
 
-#close-modal-btn:hover {
-    background: var(--accent-muted);
-    border-color: var(--accent-border-md);
-    color: var(--p-lavender);
+/* Header Alignment */
+#comparison-table thead tr { margin-bottom: 8px; }
+#comparison-table th {
+    border: none; padding: 0 12px 12px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em;
+}
+#comparison-table th:first-child { justify-content: flex-start; padding-left: 20px; }
+
+/* Sort Icons */
+#comparison-table th.sortable { cursor: pointer; transition: color 0.15s; }
+#comparison-table th.sortable:hover { color: var(--text); }
+.sort-icon { opacity: 0.3; transition: opacity var(--t); }
+#comparison-table th.sortable:hover .sort-icon,
+#comparison-table th.sort-asc .sort-icon, #comparison-table th.sort-desc .sort-icon { opacity: 0.8; }
+#comparison-table th.sort-asc .sort-icon::before { content: '\2191'; }
+#comparison-table th.sort-desc .sort-icon::before { content: '\2193'; }
+#comparison-table th:not(.sort-asc):not(.sort-desc) .sort-icon::before { content: '\2195'; }
+
+/* Algorithm Cards (Body Rows) */
+#comparison-body tr {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: var(--r-md);
+    margin-bottom: 10px; padding: 4px 0;
+    transition: transform 0.3s var(--out), box-shadow 0.3s var(--out), background 0.3s var(--out);
+}
+#comparison-body tr:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+}
+#comparison-table td {
+    border: none !important; padding: 14px 12px;
+    background: transparent !important; text-align: center;
+}
+#comparison-table td:first-child { text-align: left; padding-left: 20px; }
+
+/* Small Win Badges */
+.wins-badge {
+    display: inline-block; padding: 3px 8px; border-radius: 100px;
+    margin-left: 10px; font-family: var(--f-mono); font-size: 0.65rem; font-weight: 700;
+}
+.wins-badge--1, .wins-badge--2 { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.wins-badge--3 { background: rgba(245, 158, 11, 0.20); color: #f59e0b; }
+
+/* ── 4. The Aesthetic Winning Cards (Gradients & Glows) ── */
+
+/* Regular Winners (Green Glow) */
+#comparison-body tr.best-wt-row.best-tat-row, 
+#comparison-body tr.best-rt-row {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.01));
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.05), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+#comparison-body tr.best-wt-row.best-tat-row:hover, 
+#comparison-body tr.best-rt-row:hover { 
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.12); 
 }
 
-[data-theme="light"] #close-modal-btn {
-    background: rgba(255, 255, 255, 0.85);
-    border-color: rgba(0, 0, 0, 0.15);
-    color: var(--text);
+/* Overall Champion (Gold Glow) - Overrides the green if it wins everything */
+#comparison-body tr.best-wt-row.best-tat-row.best-rt-row {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.02));
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.1), inset 0 1px 0 rgba(255,255,255,0.1);
 }
+#comparison-body tr.best-wt-row.best-tat-row.best-rt-row:hover { 
+    box-shadow: 0 12px 35px rgba(245, 158, 11, 0.2); 
+}
+
+/* Winning Text Values */
+td.best-val { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+td.best-val::after { content: ' ★'; font-size: 0.75rem; opacity: 0.6; }
+#comparison-body tr.best-wt-row.best-tat-row td.best-val, 
+#comparison-body tr.best-rt-row td.best-val { color: #10b981; }
+#comparison-body tr.best-wt-row.best-tat-row.best-rt-row td.best-val { color: #f59e0b; }
+
+/* ── 5. Summary Footer ── */
+.comparison-summary {
+    margin-top: 24px; padding: 18px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: var(--r-md);
+    text-align: center; font-size: 0.9rem; color: var(--text-sub);
+}
+.summary-winner { color: #10b981; font-weight: 600; }
+.summary-champion { color: #f59e0b; font-weight: 700; font-size: 1.05rem; }
 
 /* ================================================================
    TOGGLE SWITCH
@@ -1540,151 +1437,136 @@ input:checked + .slider:before {
 
 
 /* ================================================================
-   LIGHT THEME OVERRIDES
+   MODERN COMPARISON MODAL - LIGHT THEME OVERRIDES
+   ================================================================ */
+[data-theme="light"] .modal-overlay { background: rgba(255, 255, 255, 0.5); }
+[data-theme="light"] .modal-content {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0,0,0,0.05);
+    box-shadow: 0 40px 100px rgba(100, 80, 180, 0.15);
+}
+[data-theme="light"] #comparison-section .out-card-header { border-bottom-color: rgba(0,0,0,0.06); }
+[data-theme="light"] #close-modal-btn { background: rgba(0,0,0,0.04); color: var(--text); }
+[data-theme="light"] #close-modal-btn:hover { background: var(--danger-dim); }
+
+[data-theme="light"] .legend-item {
+    background: rgba(255,255,255,0.8); border-color: rgba(0,0,0,0.08); color: var(--text-sub);
+}
+[data-theme="light"] #comparison-body tr {
+    background: rgba(255,255,255,0.6); border-color: rgba(0,0,0,0.06);
+}
+[data-theme="light"] #comparison-body tr:hover {
+    background: #fff; box-shadow: 0 12px 24px rgba(100,80,180,0.08);
+}
+[data-theme="light"] #comparison-body tr.best-wt-row.best-tat-row,
+[data-theme="light"] #comparison-body tr.best-rt-row {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.02));
+    border-color: rgba(16, 185, 129, 0.4);
+}
+[data-theme="light"] #comparison-body tr.best-wt-row.best-tat-row.best-rt-row {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.03));
+    border-color: rgba(245, 158, 11, 0.5);
+}
+[data-theme="light"] .comparison-summary { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.05); }
+[data-theme="light"] .wins-badge--1, [data-theme="light"] .wins-badge--2 { color: #059669; }
+[data-theme="light"] .wins-badge--3 { color: #d97706; }
+
+/* ================================================================
+   LIGHT THEME — GLOBAL OVERRIDES
    ================================================================ */
 
+/* ── Aurora & Background ── */
 [data-theme="light"] .orb { opacity: 0.32; }
 
+/* ── Top Nav ── */
 [data-theme="light"] .topbar { background: rgba(255,255,255,0.72); }
 
-[data-theme="light"] .theme-btn .icon-sun  { opacity: 1; transform: rotate(0deg) scale(1); }
-[data-theme="light"] .theme-btn .icon-moon { opacity: 0; transform: rotate(-90deg) scale(0.5); }
+/* ── Theme Toggle Icon Swap ── */
+[data-theme="light"] .theme-btn .icon-sun  { opacity: 1;  transform: rotate(0deg)   scale(1);   }
+[data-theme="light"] .theme-btn .icon-moon { opacity: 0;  transform: rotate(-90deg) scale(0.5); }
 
+/* ── Hero Gradient ── */
 [data-theme="light"] h1 em {
     background: linear-gradient(125deg, #7c6cf0 0%, #ec80b4 55%, #38bdf8 100%);
     -webkit-background-clip: text;
     background-clip: text;
 }
 
-[data-theme="light"] .select-wrapper select option {
-    background: #f5f3ff;
-    color: #1e1433;
-}
-
+/* ── Algorithm Dropdown ── */
 [data-theme="light"] .select-wrapper select {
     background: rgba(255,255,255,0.70);
     border-color: rgba(124,108,240,0.14);
 }
-
+[data-theme="light"] .select-wrapper select option {
+    background: #f5f3ff;
+    color: #1e1433;
+}
 [data-theme="light"] .select-wrapper select:focus {
     border-color: rgba(124,108,240,0.45);
     box-shadow: 0 0 0 3px rgba(124,108,240,0.10);
 }
 
+/* ── Algo Chip ── */
 [data-theme="light"] .algo-chip {
-    background: rgba(124, 108, 240, 0.06);
-    border-color: rgba(124, 108, 240, 0.14);
+    background: rgba(124,108,240,0.06);
+    border-color: rgba(124,108,240,0.14);
 }
 
+/* ── Primary Button ── */
 [data-theme="light"] .btn.primary {
     background: linear-gradient(135deg, #7c6cf0, #6366f1);
     color: #fff;
     box-shadow: 0 4px 24px rgba(124,108,240,0.30), inset 0 1px 0 rgba(255,255,255,0.22);
 }
 
-[data-theme="light"] thead { background: rgba(0,0,0,0.025); }
-
-[data-theme="light"] td { border-bottom-color: rgba(0,0,0,0.04); }
-
-[data-theme="light"] tbody tr:hover td { background: rgba(0,0,0,0.02); }
-
-[data-theme="light"] .gantt-wrapper::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.04);
+/* ── Tables ── */
+[data-theme="light"] thead                     { background: rgba(0,0,0,0.025); }
+[data-theme="light"] td                        { border-bottom-color: rgba(0,0,0,0.04); }
+[data-theme="light"] tbody tr:hover td         { background: rgba(0,0,0,0.02); }
+[data-theme="light"] #results-body tr:hover td {
+    background: rgba(124,108,240,0.05);
+    border-bottom-color: transparent;
 }
 
+/* ── Gantt Scrollbar ── */
+[data-theme="light"] .gantt-wrapper::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.04);
+}
+
+/* ── Timeline Alternating Colour ── */
 [data-theme="light"] .time-block:nth-child(even) .time-marker:not(.start-marker) {
     color: var(--accent);
 }
 
+/* ── Stat Cards ── */
 [data-theme="light"] .stat-icon {
-    background: rgba(124, 108, 240, 0.1);
-    border-color: rgba(124, 108, 240, 0.2);
+    background: rgba(124,108,240,0.10);
+    border-color: rgba(124,108,240,0.20);
 }
+[data-theme="light"] .stat-icon svg { color: var(--accent); }
+[data-theme="light"] .stat-value    { color: #6d57e8; text-shadow: 0 0 18px rgba(109,87,232,0.22); }
 
+/* ── Grand Finale Button ── */
 [data-theme="light"] .grand-finale-btn {
-    box-shadow: 0 8px 32px rgba(124,108,240,0.30), inset 0 1px 0 rgba(255,255,255,0.4);
+    box-shadow: 0 8px 32px rgba(124,108,240,0.30), inset 0 1px 0 rgba(255,255,255,0.40);
 }
-
 [data-theme="light"] .grand-finale-btn:hover {
     box-shadow: 0 12px 40px rgba(124,108,240,0.45);
 }
 
-[data-theme="light"] .stat-icon svg {
-    color: var(--accent); 
-}
+/* ── Best-value cell in results table ── */
+[data-theme="light"] td.best-val { color: #059669; }
 
-[data-theme="light"] .stat-value {
-    color: #6d57e8;
-    text-shadow: 0 0 18px rgba(109,87,232,0.22);
-}
-
-[data-theme="light"] td.best-val {
-    color: #059669; 
-}
-
-[data-theme="light"] #comparison-body tr.best-wt-row td { 
-    background: rgba(6, 182, 212, 0.06); 
-}
-
-[data-theme="light"] #comparison-body tr.best-wt-row td:first-child { 
-    border-left-color: #0891b2; 
-}
-
-[data-theme="light"] #comparison-body tr.best-tat-row td {
-    background: rgba(245, 158, 11, 0.06);
-}
-
-[data-theme="light"] #comparison-body tr.best-tat-row td:first-child {
-    border-left-color: #d97706;
-}
-
-[data-theme="light"] #comparison-body tr.best-wt-row.best-tat-row td { 
-    background: rgba(5, 150, 105, 0.06); 
-}
-
-[data-theme="light"] #comparison-body tr.best-wt-row.best-tat-row td:first-child { 
-    border-left-color: #059669; 
-}
-
-[data-theme="light"] #comparison-body tr.best-rt-row td {
-    background: rgba(6, 182, 212, 0.06);
-}
-
-[data-theme="light"] #comparison-body tr.best-rt-row td:first-child {
-    border-left-color: #0891b2;
-}
-
-[data-theme="light"] #comparison-body tr.best-wt-row.best-tat-row.best-rt-row td {
-    background: rgba(217, 119, 6, 0.08);
-}
-
-[data-theme="light"] #comparison-body tr.best-wt-row.best-tat-row.best-rt-row td:first-child {
-    border-left-color: #d97706;
-}
-
-[data-theme="light"] .toast {
-    box-shadow: 0 10px 40px rgba(100, 80, 180, 0.12);
-}
-
+/* ── Toast ── */
+[data-theme="light"] .toast { box-shadow: 0 10px 40px rgba(100,80,180,0.12); }
 [data-theme="light"] .toast.success .toast-icon {
     color: #059669;
-    background: rgba(5, 150, 105, 0.15);
+    background: rgba(5,150,105,0.15);
 }
 
-[data-theme="light"] #results-body tr:hover td {
-    background: rgba(124, 108, 240, 0.05); 
-    border-bottom-color: transparent;
-}
-
-[data-theme="light"] .modal-overlay {
-    background: rgba(255, 255, 255, 0.3);
-}
-
+/* ── Toggle Switch ── */
 [data-theme="light"] input:checked + .slider {
     background-color: rgba(124,108,240,0.15);
-    border-color: rgba(124,108,240,0.4);
+    border-color: rgba(124,108,240,0.40);
 }
-
-[data-theme="light"] input:checked + .slider:before {
-    background-color: var(--accent);
-}
+[data-theme="light"] input:checked + .slider:before { background-color: var(--accent); }
