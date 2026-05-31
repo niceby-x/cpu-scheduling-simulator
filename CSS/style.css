@@ -1752,6 +1752,132 @@ input:checked + .slider:before {
     .out-card { padding: 22px 18px; }
     .panel { padding: 22px 18px; }
     .topbar { padding: 0 18px; }
+
+    /* ── Card-Based Process Table (mobile) ──────────────────────────────
+       At this breakpoint the standard thead/tr/td table is visually
+       transformed into a stack of input cards. No JS changes required —
+       the layout is achieved entirely with grid-template-areas, ::before
+       labels, and display overrides scoped to the queue panel only.
+       The results table (.out-card .table-responsive) keeps its normal
+       horizontal-scroll layout and is unaffected by these rules.
+    ─────────────────────────────────────────────────────────────────── */
+
+    /* Let the queue panel's wrapper breathe without a scroll container */
+    .queue-panel .table-responsive {
+        overflow-x: visible;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    /* Switch the table element itself to block so rows stack vertically */
+    #input-table {
+        display: block;
+        min-width: 0;
+    }
+
+    /* Hide the standard column header row — labels appear inside each card */
+    #input-table thead { display: none; }
+
+    /* tbody becomes a flex column so gap works cleanly between cards */
+    #input-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* ── Each <tr> → a self-contained input card ── */
+    #process-body tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-areas:
+            "pid pid del"
+            "at  bt  pri";
+        column-gap: 12px;
+        row-gap: 10px;
+        background: var(--input-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--r-md);
+        padding: 14px 16px;
+        transition: border-color var(--t), background var(--t);
+    }
+
+    #process-body tr:hover {
+        border-color: var(--accent-border-sm);
+        background: var(--accent-subtle);
+    }
+
+    /* Suppress the default td bottom-border — the card border replaces it */
+    #process-body tr td {
+        border-bottom: none;
+        padding: 0;
+    }
+
+    /* ── Cell 1: PID (color dot + read-only ID) ── */
+    #process-body tr td:nth-child(1) {
+        grid-area: pid;
+        display: flex;
+        align-items: center;
+    }
+
+    /* ── Cell 5: Delete button — flush to the right of the PID row ── */
+    #process-body tr td:nth-child(5) {
+        grid-area: del;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    /* ── Cells 2-4: Labeled numeric input fields ── */
+    #process-body tr td:nth-child(2),
+    #process-body tr td:nth-child(3),
+    #process-body tr td:nth-child(4) {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    /* Inline label rendered via ::before — no HTML change needed */
+    #process-body tr td:nth-child(2)::before { content: "Arrival"; }
+    #process-body tr td:nth-child(3)::before { content: "Burst"; }
+    #process-body tr td:nth-child(4)::before { content: "Priority"; }
+
+    #process-body tr td:nth-child(2)::before,
+    #process-body tr td:nth-child(3)::before,
+    #process-body tr td:nth-child(4)::before {
+        font-family: var(--f-mono);
+        font-size: 0.55rem;
+        font-weight: 600;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        line-height: 1;
+    }
+
+    /* Grid area assignments for the three numeric fields */
+    #process-body tr td:nth-child(2) { grid-area: at; }
+    #process-body tr td:nth-child(3) { grid-area: bt; }
+    #process-body tr td:nth-child(4) { grid-area: pri; }
+
+    /* Number inputs fill the full card column for a large, comfortable touch target */
+    #process-body tr td:nth-child(2) input[type="number"],
+    #process-body tr td:nth-child(3) input[type="number"],
+    #process-body tr td:nth-child(4) input[type="number"] {
+        width: 100%;
+        background: var(--glass);
+        border: 1px solid var(--input-border);
+        border-radius: var(--r-xs);
+        padding: 10px 8px;
+        text-align: center;
+    }
+
+    #process-body tr td:nth-child(2) input[type="number"]:focus,
+    #process-body tr td:nth-child(3) input[type="number"]:focus,
+    #process-body tr td:nth-child(4) input[type="number"]:focus {
+        background: var(--accent-subtle);
+        border-color: var(--accent-border-lg);
+        box-shadow: 0 0 0 3px var(--accent-glow-sm);
+    }
 }
 
 
